@@ -1,0 +1,33 @@
+---
+name: traceability-mapping
+description: "Use when building or repairing mechanical traceability across requirement IDs, design element IDs, plan item IDs, test IDs, and review IDs"
+user-invocable: false
+---
+
+# Traceability Mapping
+
+## When to Use
+
+- REQ、DSG、PLN、TST、REV の対応表を作るとき
+- 未トレース要件や孤立 ID を検出したいとき
+- 承認ゲート前に機械的な追跡性を確認したいとき
+
+## Procedure
+
+1. 対象文書から各 ID を列挙する。
+2. REQ -> DSG -> PLN -> TST の対応を埋める。
+3. REV には影響する REQ と DSG または PLN を紐付ける。
+4. 重複 ID、孤立 ID、未参照 ID を洗い出す。
+5. 未トレース件数を明示してレビューへ渡す。
+
+## Checks
+
+- 要件 ID が一意である。
+- 未トレース要件 ID が 0 件である。
+- G2 前は未トレース設計要素 ID が 0 件である。
+
+## References
+
+- [Detailed design template](../../../templates/detailed-design.md)
+- [Implementation and test plan template](../../../templates/implementation-test-plan.md)
+- [Review record template](../../../templates/review-record.md)
