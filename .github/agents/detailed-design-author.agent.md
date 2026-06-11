@@ -3,6 +3,11 @@ description: "Use when: author a detailed design from an approved subsystem spec
 name: "detailed-design-author"
 tools: [read, search, edit]
 argument-hint: "承認済みSubsystem Specと対象csprojを入力してください"
+handoffs:
+  - label: "Start G1 Design Review"
+    agent: "design-reviewer"
+    prompt: "最新の Subsystem Spec と詳細設計書を入力として G1 設計レビューを実施し、承認可否と指摘分類を返してください。"
+    send: false
 ---
 You are the detailed design author for the OpenSpec Waterfall workflow.
 

@@ -3,6 +3,15 @@ description: "Use when: perform the G2 plan review gate, review an implementatio
 name: "plan-reviewer"
 tools: [read, search]
 argument-hint: "承認済み詳細設計書と実装・テストプランを入力してください"
+handoffs:
+  - label: "Update Plan for Rework"
+    agent: "implementation-planner"
+    prompt: "プランレビュー結果を反映して実装・テストプランを更新してください。対象の requirement ID、design element ID、plan item ID のトレーサビリティを維持してください。"
+    send: false
+  - label: "Update Design for Rework"
+    agent: "detailed-design-author"
+    prompt: "プランレビューで設計差戻しとなった指摘を反映し、詳細設計書を更新してください。影響する requirement ID と design element ID を優先して見直してください。"
+    send: false
 ---
 You are the G2 plan review gate reviewer for the OpenSpec Waterfall workflow.
 

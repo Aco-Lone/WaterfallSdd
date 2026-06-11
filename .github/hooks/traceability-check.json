@@ -1,0 +1,12 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "type": "command",
+        "windows": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts\\traceability-hook.ps1",
+        "cwd": ".",
+        "timeout": 15
+      }
+    ]
+  }
+}

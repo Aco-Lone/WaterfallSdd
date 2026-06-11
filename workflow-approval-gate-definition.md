@@ -19,6 +19,7 @@
 2. csproj 単位の詳細設計書
 3. csproj 単位の実装・テストプラン
 4. レビュー記録および承認記録
+5. 実装レビュー結果の分析記録と改善記録
 
 ## 3. 成果物の責務
 
@@ -45,6 +46,13 @@
 - 環境準備
 - 設計とのトレーサビリティ
 
+### 3.4 実装レビュー結果の分析記録と改善記録
+
+- 実装レビュー結果の原因分類
+- 頻出するミスの傾向整理
+- 改善対象とする skill またはカスタムインストラクションの特定
+- 改善内容と根拠レビュー ID の対応
+
 ## 4. 基本原則
 
 1. 実装・テストプランは、設計を具体化するものであり、設計を上書きしてはならない。
@@ -53,6 +61,7 @@
 4. 設計書の軽微修正を除き、設計変更が発生した場合は、影響範囲のプランを再レビューする。
 5. 誤字脱字、図表レイアウト、参照リンクや章番号の修正のみを軽微修正とする。
 6. 承認ゲートを通過するまでは、次工程へ進まない。
+7. 実装レビュー完了後は、レビュー結果を分類し、再発防止のために skill またはカスタムインストラクションの改善要否を判定する。
 
 ## 5. 要件 ID ベースのトレーサビリティ規則
 
@@ -67,6 +76,7 @@
 - 実装・テストプランの各項目には、対応する要件 ID と設計要素 ID を記載する
 - テスト設計とテストケースには、検証対象の要件 ID を記載する
 - レビュー指摘には、影響する要件 ID を必ず記録する
+- 改善記録には、根拠となるレビュー指摘 ID と更新対象ファイルを記録する
 
 ### 5.3 最低限追跡する対応関係
 
@@ -75,6 +85,14 @@
 - REQ -> TST
 - REV -> REQ
 - REV -> DSG または PLN
+
+### 5.4 自動トレーサビリティ検証
+
+- workspace hook は [.github/hooks/traceability-check.json](.github/hooks/traceability-check.json) から [scripts/traceability-hook.ps1](scripts/traceability-hook.ps1) を PostToolUse で実行する
+- hook は Subsystem Spec、Detailed Design、Implementation/Test Plan の Markdown を対象に機械的検証を行う
+- hook は定義表内の ID 重複を失敗とする
+- hook は Detailed Design の Traceability Summary で未トレース要件 ID を失敗とする
+- hook は Implementation/Test Plan の Traceability Matrix で要件 ID または設計要素 ID が空の plan item を失敗とする
 
 ## 6. 指摘の分類基準
 
@@ -132,6 +150,10 @@ flowchart TD
     F -->|非軽微修正| G[影響範囲プラン更新]
     G --> D
     D -->|承認| H[実装・テスト開始]
+    H --> I[実装レビュー]
+    I --> J[レビュー結果分類と原因分析]
+    J --> K[skill またはカスタムインストラクション更新]
+    K --> L[改善反映確認]
 ```
 
 ## 8. 承認ゲート定義
@@ -213,6 +235,8 @@ flowchart TD
 - 指摘分類
 - 指摘内容
 - 戻し先
+- 原因分類
+- 根本原因
 - 修正担当
 - 修正結果
 - 再レビュー要否
@@ -227,6 +251,17 @@ flowchart TD
 
 1 または 2 に該当すれば設計書へ戻す。3 のみで解決できる場合はプラン内で閉じる。
 
-## 12. 本定義の採用方針
+## 12. 実装完了後の継続改善プロセス
+
+1. 実装レビュー完了後に、対象のレビュー記録を収集する。
+2. 各指摘を、要件読解不足、トレーサビリティ記載漏れ、戻し先判定誤り、工程逸脱、出力形式不整合、レビュー観点漏れなどの原因分類へ正規化する。
+3. 頻度と重大度を集計し、表面的な指摘内容ではなく根本原因を特定する。
+4. 根本原因が工程固有の手順不足であれば workspace skill を更新対象とし、横断的な既定動作の不足であれば workspace custom instructions を更新対象とする。
+5. 一回限りの局所不具合で再利用価値が低い場合は、成果物修正で閉じ、skill や custom instructions には反映しない。
+6. 改善分析には [.github/skills/review-driven-improvement/SKILL.md](.github/skills/review-driven-improvement/SKILL.md) を用い、必要に応じて [.github/agents/review-improvement-analyst.agent.md](.github/agents/review-improvement-analyst.agent.md) で分類と改善案の整理を行う。
+7. custom instructions の更新先が未作成であれば、.github/copilot-instructions.md または .github/instructions/*.instructions.md を新規作成対象として扱う。
+8. 改善後は、関連する agent、skill、instructions の整合性を確認し、同一ルールの重複記載を避ける。
+
+## 13. 本定義の採用方針
 
 本ワークフローでは、OpenSpec を仕様の唯一の正本とし、詳細設計書と実装・テストプランをレビューゲートによって厳密に接続する。これにより、Superpowers の TDD 的な進め方を採らずとも、skill ベースの考え方だけを工程管理へ取り込み、Waterfall 寄りの運用を維持できる。

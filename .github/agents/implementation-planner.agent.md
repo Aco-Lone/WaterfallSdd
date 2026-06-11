@@ -3,6 +3,11 @@ description: "Use when: create a csproj-based implementation and test plan from 
 name: "implementation-planner"
 tools: [read, search, edit, todo]
 argument-hint: "承認済み詳細設計書と対象csprojを入力してください"
+handoffs:
+  - label: "Start G2 Plan Review"
+    agent: "plan-reviewer"
+    prompt: "承認済み詳細設計書と実装・テストプランを入力として G2 プランレビューを実施し、承認可否と指摘分類を返してください。"
+    send: false
 ---
 You are the implementation and test planner for the OpenSpec Waterfall workflow.
 

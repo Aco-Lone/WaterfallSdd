@@ -21,9 +21,9 @@
 
 ## Findings
 
-| Review ID | Severity | Return Target | Requirement IDs | Design Element IDs | Plan Item IDs | Finding | Action | Status |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| REV-001 | Critical / Major / Minor | Design / Plan / Minor Fix | REQ-001 | DSG-001 | PLN-001 |  |  | Open / Closed |
+| Review ID | Severity | Return Target | Requirement IDs | Design Element IDs | Plan Item IDs | Cause Category | Root Cause | Finding | Action | Status |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| REV-001 | Critical / Major / Minor | Design / Plan / Minor Fix | REQ-001 | DSG-001 | PLN-001 | Requirement Interpretation / Traceability / Process Deviation / Output Format / Review Coverage |  |  |  | Open / Closed |
 
 ## Gate Checklist
 
