@@ -88,7 +88,7 @@ flowchart TD
   - 未トレース要件 ID が 0 件
   - 要件漏れ、責務分割不整合、図と本文の矛盾、エラー設計不足、テスト設計不足、テスタビリティ不足がない
 
-### Step 4. 実装・テストプラン作成
+### Step 4. 実装プラン作成
 
 - 主 prompt: implementation-planner
 - 使う skill:
@@ -100,17 +100,37 @@ flowchart TD
   - 承認済み Detailed Design
   - 対象 csproj
 - 出力:
-  - Implementation and Test Plan
+  - Implementation Plan
   - plan item ID 付き作業分割
   - 実装順序
-  - テスト順序
   - 環境準備
   - 要件 ID、設計要素 ID、プラン項目 ID の対応表
 - 完了条件:
   - 各 plan item が requirement ID と design element ID を持つ
   - 設計判断を上書きしていない
 
-### Step 5. G2 プランレビュー
+### Step 5. テストプラン作成
+
+- 主 prompt: test-planner
+- 使う skill:
+  - test-plan-authoring
+  - traceability-mapping
+- 必要に応じて補助で使う skill:
+  - csproj-slicing
+- 入力:
+  - 承認済み Detailed Design
+  - 対象 csproj
+- 出力:
+  - Test Plan
+  - test ID 付きテスト作業分割
+  - テスト順序
+  - テストデータ、前提条件、環境準備
+  - 要件 ID、設計要素 ID、テスト ID の対応表
+- 完了条件:
+  - 各 test item が requirement ID と design element ID を持つ
+  - 設計判断を上書きしていない
+
+### Step 6. G2 プランレビュー
 
 - 主 prompt: plan-reviewer
 - 使う skill:
@@ -121,15 +141,17 @@ flowchart TD
   - traceability-mapping
 - 入力:
   - 承認済み Detailed Design
-  - Implementation and Test Plan
+  - Implementation Plan
+  - Test Plan
 - 出力:
   - G2 レビュー記録
   - 指摘分類
   - 承認可否
 - 判定:
   - 承認なら実装・テスト開始
-  - プラン内で閉じる指摘なら Step 4 に戻る
-  - 設計差戻し指摘なら Step 2 に戻り、設計修正後に影響範囲プランを更新して再度 Step 5 を実施する
+  - 実装プランの指摘なら Step 4 に戻る
+  - テストプランの指摘なら Step 5 に戻る
+  - 設計差戻し指摘なら Step 2 に戻り、設計修正後に影響範囲プランを更新して再度 Step 6 を実施する
   - 軽微修正なら修正反映後に完了扱いとする
 - 確認ポイント:
   - 未トレース要件 ID が 0 件
@@ -156,7 +178,8 @@ flowchart TD
 | --- | --- | --- | --- |
 | 要件の曖昧さが原因 | Subsystem Spec | subsystem-spec-author | subsystem-requirements-refinement, acceptance-criteria-check |
 | 設計構造の問題 | Detailed Design | detailed-design-author | detailed-design-authoring, traceability-mapping |
-| プランだけの問題 | Implementation/Test Plan | implementation-planner | implementation-plan-authoring, csproj-slicing |
+| 実装プランだけの問題 | Implementation Plan | implementation-planner | implementation-plan-authoring, csproj-slicing |
+| テストプランだけの問題 | Test Plan | test-planner | test-plan-authoring, traceability-mapping |
 | 戻し先の判断に迷う | レビュー判定補助 | design-reviewer または plan-reviewer | defect-classification, return-target-classification |
 
 ## 6. 最短実行順
@@ -165,6 +188,7 @@ flowchart TD
 2. detailed-design-author
 3. design-reviewer
 4. implementation-planner
-5. plan-reviewer
+5. test-planner
+6. plan-reviewer
 
-この 5 つを主経路とし、各 phase の内部で必要な skill を適用する。
+この 6 つを主経路とし、各 phase の内部で必要な skill を適用する。

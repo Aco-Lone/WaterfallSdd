@@ -1,6 +1,6 @@
 ---
 name: return-target-classification
-description: "Use when deciding the return target of a review finding between detailed design, implementation plan, or minor fix handling"
+description: "Use when deciding the return target of a review finding between detailed design, implementation plan, test plan, or minor fix handling"
 user-invocable: false
 ---
 

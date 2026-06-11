@@ -58,7 +58,7 @@ user-invocable: false
 
 - Use a hyphenated skill name that is easy to search.
 - Keep description under control: write only when to use the skill, not the step sequence.
-- In Procedure, make the owning artifact explicit: Subsystem Spec, Detailed Design, Implementation and Test Plan, or Review Record.
+- In Procedure, make the owning artifact explicit: Subsystem Spec, Detailed Design, Implementation Plan, Test Plan, or Review Record.
 - In Checks, state the IDs that must remain traceable, such as REQ, DSG, PLN, TST, and REV.
 - If the skill supports a review gate, state what must be returned upstream instead of being closed locally.
 - Add References only to stable workspace assets that the skill should routinely consult.

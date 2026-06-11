@@ -18,16 +18,17 @@ OpenSpec には、既存の仕様管理に加えて以下の phase を明示的�
 1. Subsystem Spec
 2. Detailed Design
 3. Design Review Gate
-4. Implementation/Test Plan
-5. Plan Review Gate
+4. Implementation Plan
+5. Test Plan
+6. Plan Review Gate
 
-この 5 phase により、仕様、設計、計画、承認を分離し、実装開始前に設計とプランの両方を承認済みにする。
+この 6 phase により、仕様、設計、実装計画、テスト計画、承認を分離し、実装開始前に設計と両プランを承認済みにする。
 
 ## 3. 設計原則
 
 1. OpenSpec は仕様の唯一の正本とする。
 2. 詳細設計書は、仕様をクラス構成、アクティビティ図、エラー設計、テスト設計へ落とし込む成果物とする。
-3. 実装・テストプランは、設計を変更せずに実行可能な計画へ変換する成果物とする。
+3. 実装プランとテストプランは、設計を変更せずに実行可能な計画へ変換する成果物とする。
 4. 要件には一意の要件 ID を付与し、下流成果物は要件 ID を基点に機械的にトレーサビリティを取る。
 5. レビュー指摘は「設計へ戻す」「プランで閉じる」「軽微修正」に分類する。
 6. G1 と G2 の承認ゲートを通過するまでは実装・テストへ進まない。
@@ -37,7 +38,7 @@ OpenSpec には、既存の仕様管理に加えて以下の phase を明示的�
 ### 4.1 基本方針
 
 - OpenSpec 上の各要件には一意の要件 ID を付与する
-- 詳細設計書、実装・テストプラン、テストケース、レビュー記録は要件 ID を必須項目として保持する
+- 詳細設計書、実装プラン、テストプラン、テストケース、レビュー記録は要件 ID を必須項目として保持する
 - 要件 ID をキーに、要件から設計、プラン、テスト、レビュー指摘まで追跡できる構造を維持する
 - 要件の意味が変わる変更は既存 ID を流用せず、新しい要件 ID を採番する
 - 廃止要件は削除せず、廃止状態として履歴を保持する
@@ -69,7 +70,7 @@ OpenSpec には、既存の仕様管理に加えて以下の phase を明示的�
 - REQ -> PLN
 - REQ -> TST
 - REV -> REQ
-- REV -> DSG または PLN
+- REV -> DSG または PLN または TST
 
 ### 4.4 成果物ごとの必須記載項目
 
@@ -86,9 +87,15 @@ OpenSpec には、既存の仕様管理に加えて以下の phase を明示的�
 - 対応する要件 ID
 - クラス構成または図表との対応
 
-#### Implementation/Test Plan
+#### Implementation Plan
 
 - プラン項目 ID
+- 対応する要件 ID
+- 対応する設計要素 ID
+
+#### Test Plan
+
+- テスト ID
 - 対応する要件 ID
 - 対応する設計要素 ID
 
@@ -151,25 +158,37 @@ Subsystem Spec を基に、csproj 単位の詳細設計書を作成する。
 - 指摘分類
 - 承認可否
 
-### 5.4 Implementation/Test Plan
+### 5.4 Implementation Plan
 
 #### 目的
 
-承認済みの詳細設計書を基に、csproj 単位の実装・テストプランを作成する。
+承認済みの詳細設計書を基に、csproj 単位の実装プランを作成する。
 
 #### 出力
 
 - 実装順序
 - 作業分割
-- テスト実行順序
 - 環境準備
 - 設計とのトレーサビリティ
 
-### 5.5 Plan Review Gate
+### 5.5 Test Plan
 
 #### 目的
 
-実装・テストプランが設計を正しく具体化しているかを判定し、プランで閉じる指摘と設計へ戻す指摘を確定する。
+承認済みの詳細設計書を基に、csproj 単位のテストプランを作成する。
+
+#### 出力
+
+- テスト実行順序
+- テストデータと前提条件
+- テスト環境準備
+- 設計とのトレーサビリティ
+
+### 5.6 Plan Review Gate
+
+#### 目的
+
+実装プランとテストプランが設計を正しく具体化しているかを判定し、プランで閉じる指摘と設計へ戻す指摘を確定する。
 
 #### 出力
 
@@ -192,7 +211,8 @@ Subsystem Spec を基に、csproj 単位の詳細設計書を作成する。
 | Subsystem Spec | subsystem-requirements-refinement, acceptance-criteria-check | subsystem-spec-author.prompt.md | subsystem-spec-author.agent.md | サブシステム要件を漏れなく仕様化する |
 | Detailed Design | detailed-design-authoring, traceability-mapping | detailed-design-author.prompt.md | detailed-design-author.agent.md | クラス構成、アクティビティ図、エラー設計、テスト設計を作成する |
 | Design Review Gate | design-gate-review, defect-classification | design-reviewer.prompt.md | design-reviewer.agent.md | 設計へ戻す指摘と軽微修正を判定する |
-| Implementation/Test Plan | implementation-plan-authoring, csproj-slicing | implementation-planner.prompt.md | implementation-planner.agent.md | 設計を変更せず csproj 単位の実行計画へ落とす |
+| Implementation Plan | implementation-plan-authoring, csproj-slicing | implementation-planner.prompt.md | implementation-planner.agent.md | 設計を変更せず csproj 単位の実装計画へ落とす |
+| Test Plan | test-plan-authoring, traceability-mapping | test-planner.prompt.md | test-planner.agent.md | 設計を変更せず csproj 単位のテスト計画へ落とす |
 | Plan Review Gate | plan-gate-review, return-target-classification | plan-reviewer.prompt.md | plan-reviewer.agent.md | プラン内で閉じる指摘と設計へ戻す指摘を判定する |
 
 ### 6.2 各 custom agent の責務と禁止事項
@@ -289,7 +309,8 @@ Subsystem Spec を基に、csproj 単位の詳細設計書を作成する。
 #### 入力
 
 - 承認済み詳細設計書
-- 実装・テストプラン
+- 実装プラン
+- テストプラン
 
 #### 出力
 
@@ -305,11 +326,14 @@ flowchart TD
     A[Subsystem Spec] --> B[Detailed Design]
     B --> C[Design Review Gate]
     C -->|差戻し| B
-    C -->|承認| D[Implementation/Test Plan]
-    D --> E[Plan Review Gate]
-    E -->|プラン指摘| D
-    E -->|設計指摘| B
-    E -->|承認| F[Implementation and Test]
+  C -->|承認| D[Implementation Plan]
+  C -->|承認| E[Test Plan]
+  D --> F[Plan Review Gate]
+  E --> F
+  F -->|プラン指摘| D
+  F -->|プラン指摘| E
+  F -->|設計指摘| B
+  F -->|承認| G[Implementation and Test]
 ```
 
 ## 9. 承認ゲートへの組み込み方針
@@ -363,7 +387,8 @@ specs/
 designs/
   detailed/
 plans/
-  implementation-test/
+  implementation/
+  test/
 reviews/
   design/
   plan/
@@ -378,7 +403,8 @@ templates/
 
 - subsystem-spec.md
 - detailed-design.md
-- implementation-test-plan.md
+- implementation-plan.md
+- test-plan.md
 - review-record.md
 - skill.md
 
@@ -388,6 +414,7 @@ templates/
 - detailed-design-author.prompt.md
 - design-reviewer.prompt.md
 - implementation-planner.prompt.md
+- test-planner.prompt.md
 - plan-reviewer.prompt.md
 
 ### 10.3 .github/agents 配下の対象
@@ -396,6 +423,7 @@ templates/
 - detailed-design-author.agent.md
 - design-reviewer.agent.md
 - implementation-planner.agent.md
+- test-planner.agent.md
 - plan-reviewer.agent.md
 
 ### 10.4 .github/skills 配下の対象
@@ -407,6 +435,7 @@ templates/
 - design-gate-review/SKILL.md
 - defect-classification/SKILL.md
 - implementation-plan-authoring/SKILL.md
+- test-plan-authoring/SKILL.md
 - csproj-slicing/SKILL.md
 - plan-gate-review/SKILL.md
 - return-target-classification/SKILL.md
@@ -426,7 +455,7 @@ OpenSpec の改修は、ツール本体の大規模変更ではなく、運用�
 最終的な着地点は次の状態である。
 
 - OpenSpec がサブシステム仕様の正本として運用されている
-- 詳細設計書と実装・テストプランが phase として独立管理されている
+- 詳細設計書と実装プランおよびテストプランが phase として独立管理されている
 - G1 と G2 の承認ゲートが明文化されている
 - 要件 ID を基点に未トレース要件を機械的に検出できる
 - 各 phase に対応する skill、prompt、custom agent が固定されている

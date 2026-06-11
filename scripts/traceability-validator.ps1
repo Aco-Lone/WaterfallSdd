@@ -101,6 +101,19 @@ function Add-DuplicateIdErrors {
     }
 }
 
+function Test-MarkdownSection {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Content,
+
+        [Parameter(Mandatory = $true)]
+        [string]$SectionHeading
+    )
+
+    $headingPattern = '(?m)^##\s+' + [regex]::Escape($SectionHeading) + '\s*$'
+    return $Content -match $headingPattern
+}
+
 function Test-TraceabilityDocument {
     param(
         [Parameter(Mandatory = $true)]
@@ -112,13 +125,13 @@ function Test-TraceabilityDocument {
     $errors = New-Object System.Collections.Generic.List[string]
     $documentType = 'Unknown'
 
-    if ($content -match '(?m)^##\s+Requirements\s*$') {
+    if (Test-MarkdownSection -Content $content -SectionHeading 'Requirements') {
         $documentType = 'SubsystemSpec'
         $rows = Get-MarkdownTableRows -Lines $lines -SectionHeading 'Requirements'
         $requirementIds = @($rows | ForEach-Object { if ($_.Count -gt 0) { $_[0] } })
         Add-DuplicateIdErrors -Ids $requirementIds -Label 'requirement' -Errors $errors
     }
-    elseif ($content -match '(?m)^##\s+Traceability Summary\s*$') {
+    elseif (Test-MarkdownSection -Content $content -SectionHeading 'Traceability Summary') {
         $documentType = 'DetailedDesign'
         $rows = Get-MarkdownTableRows -Lines $lines -SectionHeading 'Traceability Summary'
         $requirementIds = @($rows | ForEach-Object { if ($_.Count -gt 0) { $_[0] } })
@@ -137,20 +150,48 @@ function Test-TraceabilityDocument {
             }
         }
     }
-    elseif ($content -match '(?m)^##\s+Traceability Matrix\s*$') {
-        $documentType = 'ImplementationPlan'
-        $rows = Get-MarkdownTableRows -Lines $lines -SectionHeading 'Traceability Matrix'
-        $planItemIds = @($rows | ForEach-Object { if ($_.Count -gt 0) { $_[0] } })
+    elseif (Test-MarkdownSection -Content $content -SectionHeading 'Traceability Matrix') {
+        $hasImplementationSequence = Test-MarkdownSection -Content $content -SectionHeading 'Implementation Sequence'
+        $hasTestExecutionSequence =
+            (Test-MarkdownSection -Content $content -SectionHeading 'Test Execution Sequence') -or
+            (Test-MarkdownSection -Content $content -SectionHeading 'Test Execution Plan')
 
-        Add-DuplicateIdErrors -Ids $planItemIds -Label 'plan item' -Errors $errors
+        if ($hasImplementationSequence -and $hasTestExecutionSequence) {
+            $documentType = 'CombinedPlan'
+            $errors.Add('Combined implementation and test plan documents are no longer supported; use separate files.')
+        }
+        elseif ($hasImplementationSequence) {
+            $documentType = 'ImplementationPlan'
+            $rows = Get-MarkdownTableRows -Lines $lines -SectionHeading 'Traceability Matrix'
+            $planItemIds = @($rows | ForEach-Object { if ($_.Count -gt 0) { $_[0] } })
 
-        foreach ($row in $rows) {
-            $planItemId = if ($row.Count -gt 0) { $row[0] } else { '' }
-            $requirementIds = if ($row.Count -gt 1) { $row[1] } else { '' }
-            $designElementIds = if ($row.Count -gt 2) { $row[2] } else { '' }
+            Add-DuplicateIdErrors -Ids $planItemIds -Label 'plan item' -Errors $errors
 
-            if (-not [string]::IsNullOrWhiteSpace($planItemId) -and ([string]::IsNullOrWhiteSpace($requirementIds) -or [string]::IsNullOrWhiteSpace($designElementIds))) {
-                $errors.Add("Untraced requirement ID detected: $planItemId")
+            foreach ($row in $rows) {
+                $planItemId = if ($row.Count -gt 0) { $row[0] } else { '' }
+                $requirementIds = if ($row.Count -gt 1) { $row[1] } else { '' }
+                $designElementIds = if ($row.Count -gt 2) { $row[2] } else { '' }
+
+                if (-not [string]::IsNullOrWhiteSpace($planItemId) -and ([string]::IsNullOrWhiteSpace($requirementIds) -or [string]::IsNullOrWhiteSpace($designElementIds))) {
+                    $errors.Add("Untraced requirement ID detected: $planItemId")
+                }
+            }
+        }
+        elseif ($hasTestExecutionSequence) {
+            $documentType = 'TestPlan'
+            $rows = Get-MarkdownTableRows -Lines $lines -SectionHeading 'Traceability Matrix'
+            $testIds = @($rows | ForEach-Object { if ($_.Count -gt 0) { $_[0] } })
+
+            Add-DuplicateIdErrors -Ids $testIds -Label 'test' -Errors $errors
+
+            foreach ($row in $rows) {
+                $testId = if ($row.Count -gt 0) { $row[0] } else { '' }
+                $requirementIds = if ($row.Count -gt 1) { $row[1] } else { '' }
+                $designElementIds = if ($row.Count -gt 2) { $row[2] } else { '' }
+
+                if (-not [string]::IsNullOrWhiteSpace($testId) -and ([string]::IsNullOrWhiteSpace($requirementIds) -or [string]::IsNullOrWhiteSpace($designElementIds))) {
+                    $errors.Add("Untraced requirement ID detected: $testId")
+                }
             }
         }
     }

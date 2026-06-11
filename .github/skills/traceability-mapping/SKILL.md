@@ -29,5 +29,6 @@ user-invocable: false
 ## References
 
 - [Detailed design template](../../../templates/detailed-design.md)
-- [Implementation and test plan template](../../../templates/implementation-test-plan.md)
+- [Implementation plan template](../../../templates/implementation-plan.md)
+- [Test plan template](../../../templates/test-plan.md)
 - [Review record template](../../../templates/review-record.md)

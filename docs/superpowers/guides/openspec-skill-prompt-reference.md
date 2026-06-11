@@ -11,8 +11,9 @@
 | subsystem-spec-author | 上位設計からサブシステム仕様を作成または更新する | サブシステム要件、制約、非機能要件 | Subsystem Spec、要件 ID、受け入れ条件、未決事項 | subsystem-requirements-refinement, acceptance-criteria-check |
 | detailed-design-author | 承認済み仕様から詳細設計書を作成または更新する | 承認済み Subsystem Spec、対象 csproj | Detailed Design、設計要素 ID、要件対応表、図、エラー設計、テスト設計 | detailed-design-authoring, traceability-mapping |
 | design-reviewer | G1 設計レビューを実施する | Subsystem Spec、Detailed Design | G1 レビュー記録、指摘分類、承認可否 | design-gate-review, defect-classification |
-| implementation-planner | 承認済み設計から実装・テストプランを作成または更新する | 承認済み Detailed Design、対象 csproj | Implementation and Test Plan、PLN ID、実装順、テスト順、環境準備 | implementation-plan-authoring, csproj-slicing |
-| plan-reviewer | G2 プランレビューを実施する | 承認済み Detailed Design、Implementation and Test Plan | G2 レビュー記録、指摘分類、承認可否 | plan-gate-review, return-target-classification |
+| implementation-planner | 承認済み設計から実装プランを作成または更新する | 承認済み Detailed Design、対象 csproj | Implementation Plan、PLN ID、実装順、環境準備 | implementation-plan-authoring, csproj-slicing |
+| test-planner | 承認済み設計からテストプランを作成または更新する | 承認済み Detailed Design、対象 csproj | Test Plan、TST ID、テスト順、テスト準備 | test-plan-authoring, traceability-mapping |
+| plan-reviewer | G2 プランレビューを実施する | 承認済み Detailed Design、Implementation Plan、Test Plan | G2 レビュー記録、指摘分類、承認可否 | plan-gate-review, return-target-classification |
 
 ### 2.1 subsystem-spec-author
 
@@ -49,16 +50,26 @@
 
 ### 2.4 implementation-planner
 
-- 用途: 承認済み設計を実行可能な実装・テストプランに変換する
+- 用途: 承認済み設計を実行可能な実装プランに変換する
 - 強制すること:
   - 設計判断の保持
   - csproj 単位の分割
-  - 実装順、テスト順、環境準備の明示
-  - REQ / DSG / PLN / TST の対応付け
+  - 実装順、環境準備の明示
+  - REQ / DSG / PLN の対応付け
 - 向いている場面:
-  - G2 に出す前の計画作成
+  - G2 に出す前の実装計画作成
 
-### 2.5 plan-reviewer
+### 2.5 test-planner
+
+- 用途: 承認済み設計を実行可能なテストプランに変換する
+- 強制すること:
+  - 設計判断の保持
+  - テスト実行順、前提条件、環境準備の明示
+  - REQ / DSG / TST の対応付け
+- 向いている場面:
+  - G2 に出す前のテスト計画作成
+
+### 2.6 plan-reviewer
 
 - 用途: G2 プランレビューゲートを実施する
 - 強制すること:
@@ -79,6 +90,7 @@
 | design-gate-review | G1 設計レビュー観点を適用 | G1 実施時 | 要件反映、責務分割、図整合、未トレース要件 |
 | defect-classification | 指摘を Design / Plan / Minor Fix に分ける | レビュー指摘の判断補助 | 要件影響、設計構造影響、軽微修正条件 |
 | implementation-plan-authoring | 設計を実行計画へ落とす | プラン作成時 | 設計非上書き、実行可能粒度、ID 対応 |
+| test-plan-authoring | 設計をテスト計画へ落とす | プラン作成時 | 設計非上書き、実行可能粒度、ID 対応 |
 | csproj-slicing | csproj 単位に作業を切る | プラン作成時 | 作業単位の依存、並行可否、責務境界 |
 | plan-gate-review | G2 プランレビュー観点を適用 | G2 実施時 | 未トレース要件 / 設計要素、実行順、粒度 |
 | return-target-classification | 指摘の差戻し先を決める | G2 や再レビュー時 | Detailed Design に戻すか、Plan で閉じるか |

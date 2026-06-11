@@ -28,5 +28,5 @@ user-invocable: false
 
 ## References
 
-- [Implementation and test plan template](../../../templates/implementation-test-plan.md)
+- [Implementation plan template](../../../templates/implementation-plan.md)
 - [OpenSpec modification design](../../../docs/superpowers/specs/2026-06-07-openspec-modification-design.md)

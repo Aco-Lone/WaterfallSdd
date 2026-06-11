@@ -45,22 +45,82 @@ Describe 'Test-TraceabilityDocument' {
         ($result.Errors -join "`n") | Should Match 'Untraced requirement ID'
     }
 
-    It 'accepts a fully traced implementation and test plan matrix' {
-        $filePath = Join-Path $TestDrive 'implementation-test-plan.md'
+    It 'accepts a fully traced implementation plan matrix' {
+        $filePath = Join-Path $TestDrive 'implementation-plan.md'
         @'
 # Sample Implementation Plan
 
 ## Traceability Matrix
 
-| Plan Item ID | Requirement IDs | Design Element IDs | Test IDs | Scope | Completion Criteria |
-| --- | --- | --- | --- | --- | --- |
-| PLN-001 | REQ-001 | DSG-001 | TST-001 | Scope | Done |
+| Plan Item ID | Requirement IDs | Design Element IDs | Scope | Completion Criteria |
+| --- | --- | --- | --- | --- |
+| PLN-001 | REQ-001 | DSG-001 | Scope | Done |
+
+## Implementation Sequence
+
+| Order | Plan Item ID | Work Item | Depends On | Output | Related Requirement IDs | Related Design Element IDs |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | PLN-001 | Implement feature |  | Commit | REQ-001 | DSG-001 |
 '@ | Set-Content -Path $filePath -Encoding UTF8
 
         $result = Test-TraceabilityDocument -FilePath $filePath
 
         $result.IsValid | Should Be $true
         $result.Errors.Count | Should Be 0
+    }
+
+    It 'accepts a fully traced test plan matrix' {
+        $filePath = Join-Path $TestDrive 'test-plan.md'
+        @'
+# Sample Test Plan
+
+## Traceability Matrix
+
+| Test ID | Requirement IDs | Design Element IDs | Test Scope | Expected Result |
+| --- | --- | --- | --- | --- |
+| TST-001 | REQ-001 | DSG-001 | Unit | Success |
+
+## Test Execution Sequence
+
+| Order | Test ID | Preconditions | Test Data | Expected Result | Related Requirement IDs | Related Design Element IDs |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | TST-001 | Setup complete | Sample data | Success | REQ-001 | DSG-001 |
+'@ | Set-Content -Path $filePath -Encoding UTF8
+
+        $result = Test-TraceabilityDocument -FilePath $filePath
+
+        $result.IsValid | Should Be $true
+        $result.Errors.Count | Should Be 0
+    }
+
+    It 'rejects a combined implementation and test plan document' {
+        $filePath = Join-Path $TestDrive 'implementation-test-plan.md'
+        @'
+# Sample Combined Plan
+
+## Traceability Matrix
+
+| Plan Item ID | Requirement IDs | Design Element IDs | Test IDs | Scope | Completion Criteria |
+| --- | --- | --- | --- | --- | --- |
+| PLN-001 | REQ-001 | DSG-001 | TST-001 | Scope | Done |
+
+## Implementation Sequence
+
+| Order | Plan Item ID | Work Item | Depends On | Output | Related Requirement IDs | Related Design Element IDs |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | PLN-001 | Implement feature |  | Commit | REQ-001 | DSG-001 |
+
+## Test Execution Plan
+
+| Order | Test ID | Test Scope | Preconditions | Expected Result | Related Requirement IDs |
+| --- | --- | --- | --- | --- | --- |
+| 1 | TST-001 | Unit | Setup complete | Success | REQ-001 |
+'@ | Set-Content -Path $filePath -Encoding UTF8
+
+        $result = Test-TraceabilityDocument -FilePath $filePath
+
+        $result.IsValid | Should Be $false
+        ($result.Errors -join "`n") | Should Match 'separate files'
     }
 }
 

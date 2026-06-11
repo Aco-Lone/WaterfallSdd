@@ -1,6 +1,6 @@
 ---
 name: implementation-plan-authoring
-description: "Use when converting approved detailed design into a csproj-based implementation and test plan without changing design decisions"
+description: "Use when converting approved detailed design into a csproj-based implementation plan without changing design decisions"
 user-invocable: false
 ---
 
@@ -8,16 +8,16 @@ user-invocable: false
 
 ## When to Use
 
-- 承認済み詳細設計書から実装・テストプランを起こすとき
-- 設計を変えずに実行可能な作業計画へ落としたいとき
+- 承認済み詳細設計書から実装プランを起こすとき
+- 設計を変えずに実行可能な実装計画へ落としたいとき
 
 ## Procedure
 
 1. 承認済み詳細設計書を読む。
 2. 設計要素ごとに plan item を作り、PLN ID を振る。
 3. 依存関係に基づいて実装順序を並べる。
-4. テスト順、環境準備、リスクを加える。
-5. REQ、DSG、PLN、TST の対応を明示する。
+4. 環境準備、並行可否、リスクを加える。
+5. REQ、DSG、PLN の対応を明示する。
 
 ## Checks
 
@@ -27,5 +27,5 @@ user-invocable: false
 
 ## References
 
-- [Implementation and test plan template](../../../templates/implementation-test-plan.md)
+- [Implementation plan template](../../../templates/implementation-plan.md)
 - [Workflow and gate definition](../../../workflow-approval-gate-definition.md)

@@ -10,7 +10,11 @@ handoffs:
     send: false
   - label: "Create Implementation Plan"
     agent: "implementation-planner"
-    prompt: "承認済みの詳細設計書を基に、対象 csproj の実装・テストプランを作成または更新してください。要件 ID、設計要素 ID、プラン項目 ID を明示してください。"
+    prompt: "承認済みの詳細設計書を基に、対象 csproj の実装プランを作成または更新してください。要件 ID、設計要素 ID、プラン項目 ID を明示してください。"
+    send: false
+  - label: "Create Test Plan"
+    agent: "test-planner"
+    prompt: "承認済みの詳細設計書を基に、対象 csproj のテストプランを作成または更新してください。要件 ID、設計要素 ID、テスト ID を明示してください。"
     send: false
 ---
 You are the G1 design review gate reviewer for the OpenSpec Waterfall workflow.
