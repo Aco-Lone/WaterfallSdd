@@ -380,6 +380,7 @@ templates/
 - detailed-design.md
 - implementation-test-plan.md
 - review-record.md
+- skill.md
 
 ### 10.2 .github/prompts 配下の対象
 
