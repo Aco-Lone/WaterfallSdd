@@ -14,6 +14,10 @@
 | implementation-planner | 承認済み設計から実装プランを作成または更新する | 承認済み Detailed Design、対象 csproj | Implementation Plan、PLN ID、実装順、環境準備 | implementation-plan-authoring, csproj-slicing |
 | test-planner | 承認済み設計からテストプランを作成または更新する | 承認済み Detailed Design、対象 csproj | Test Plan、TST ID、テスト順、テスト準備 | test-plan-authoring, traceability-mapping |
 | plan-reviewer | G2 プランレビューを実施する | 承認済み Detailed Design、Implementation Plan、Test Plan | G2 レビュー記録、指摘分類、承認可否 | plan-gate-review, return-target-classification |
+| implementation-executor | G2 Approved 後に承認済み実装プランを PLN 単位で実行する | 承認済み Detailed Design、Implementation Plan、Test Plan、G2 review record | 実装結果、PLN 実行状況、レビュー指摘の修正 Plan 化、完了ハンドオフ | using-git-worktrees, subagent-driven-development, executing-plans, test-driven-development, requesting-code-review, receiving-code-review, systematic-debugging, verification-before-completion, finishing-a-development-branch |
+| test-executor | 実装完了後に承認済み Test Plan を TST 単位で実行する | 承認済み Detailed Design、Implementation Plan、Test Plan、実装結果、レビュー記録 | テスト結果、TST 実行状況、失敗要因判定、改善分析向けハンドオフ | using-git-worktrees, subagent-driven-development, executing-plans, test-driven-development, requesting-code-review, receiving-code-review, systematic-debugging, verification-before-completion, finishing-a-development-branch |
+
+Step 7-9 に該当する post-G2 実行の詳細は [OpenSpec G2 後実行ガイド](openspec-post-g2-execution-guide.md) を参照する。
 
 ### 2.1 subsystem-spec-author
 
@@ -79,6 +83,26 @@
 - 向いている場面:
   - 実装開始前の最終レビュー
 
+### 2.7 implementation-executor
+
+- 用途: G2 Approved 後に承認済み実装プランを PLN 単位で実行する
+- 強制すること:
+  - REQ / DSG / PLN / REV の対応維持
+  - 実装結果とレビュー指摘の修正 Plan 化
+  - 実装完了後の test-executor への handoff
+- 向いている場面:
+  - G2 承認直後の実装開始
+
+### 2.8 test-executor
+
+- 用途: 実装完了後に承認済み Test Plan を TST 単位で実行する
+- 強制すること:
+  - REQ / DSG / TST / REV の対応維持
+  - 失敗要因の判定と戻し先の明示
+  - review-improvement-analyst への handoff
+- 向いている場面:
+  - 実装完了後のテスト実行
+
 ## 3. skill 一覧
 
 | Skill | 役割 | 主な使いどころ | 主な確認点 |
@@ -94,6 +118,8 @@
 | csproj-slicing | csproj 単位に作業を切る | プラン作成時 | 作業単位の依存、並行可否、責務境界 |
 | plan-gate-review | G2 プランレビュー観点を適用 | G2 実施時 | 未トレース要件 / 設計要素、実行順、粒度 |
 | return-target-classification | 指摘の差戻し先を決める | G2 や再レビュー時 | Detailed Design に戻すか、Plan で閉じるか |
+| implementation-execution-feedback-handling | 実装レビュー指摘の戻し先を判定 | G2 後の実装実行・再レビュー時 | REQ / DSG / PLN / REV の対応、Design / Plan / Code / Minor Fix |
+| test-execution-feedback-handling | テストレビュー指摘の戻し先を判定 | G2 後のテスト実行・再レビュー時 | REQ / DSG / TST / REV の対応、Design / Test / Code / Minor Fix |
 
 ### 3.1 subsystem-requirements-refinement
 
@@ -169,6 +195,20 @@
 - 主な効果:
   - Detailed Design へ戻すべき指摘の抽出
   - Plan 内で閉じる指摘の分離
+
+### 3.11 implementation-execution-feedback-handling
+
+- 役割: 実装レビュー指摘の戻し先を判定する
+- 主な効果:
+  - REQ / DSG / PLN / REV の対応維持
+  - Design / Plan / Code / Minor Fix の判定基準を固定する
+
+### 3.12 test-execution-feedback-handling
+
+- 役割: テストレビュー指摘の戻し先を判定する
+- 主な効果:
+  - REQ / DSG / TST / REV の対応維持
+  - Design / Test / Code / Minor Fix の判定基準を固定する
 
 ## 4. 推奨する見方
 

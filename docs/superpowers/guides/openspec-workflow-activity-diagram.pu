@@ -1,0 +1,113 @@
+@startuml openspec-workflow-activity-diagram
+title OpenSpec ワークフロー アクティビティ図
+
+|実装者|
+start
+:上位設計または変更内容をインプット;
+
+|生成AI|
+:上位設計または変更内容を受領;
+
+    :Subsystem Spec を作成または更新;
+    :brainstorming を実施し、不明点を質問;
+
+    |実装者|
+    :質問に回答;
+
+    |生成AI|
+    :Subsystem Spec を更新;
+    :Detailed Design を作成または更新;
+    :brainstorming を実施し、不明点を質問;
+
+    |実装者|
+    :質問に回答;
+    
+    |生成AI|
+    repeat
+    :Detailed Design を更新;
+    :G1レビューを依頼;
+
+    |実装者|
+    :Subsystem Spec と Detailed Design をレビュー;
+
+    |生成AI|
+    :レビュー結果を受領;
+    
+    repeat while (G1承認) is (可)
+
+repeat
+    repeat
+        repeat
+        |生成AI|
+        :Implementation Plan を作成または更新;
+        :Test Plan を作成または更新;
+        :Planをセルフレビュー;
+        repeat while (セルフレビューOK?) is (いいえ)
+
+        :G2 プランレビューを依頼;
+
+        |実装者|
+        :Implementation Plan と Test Plan をレビュー;
+
+        if (G2 承認可?) then (承認)
+            :G2 承認を返却;
+        else (差戻し)
+            :レビュー結果を返却;
+        endif
+    repeat while (G2 が承認されていない?) is (はい)
+
+    |レビュアー|
+    :Implementation Plan と Test Plan をレビュー;
+    :レビュー結果を返却;
+repeat while (G2 が承認されていない?) is (はい)
+
+|実装者|
+:承認済み設計・Planを受領;
+:実装を依頼;
+
+|生成AI|
+:実装を開始;
+
+repeat
+    repeat
+        :実装Taskごとにサブエージェントに実装を委譲;
+        :実装Taskごとにサブエージェントにセルフレビューを委譲;
+
+        |実装者|
+        :実装レビューを実施;
+        :レビュー結果をインプット;
+
+        |生成AI|
+        :レビュー結果を受領;
+        :修正Planを作成;
+    repeat while(修正が必要?) is (はい)
+
+    |生成AI|
+    :テストを開始;
+        
+    repeat
+        :テストTaskごとにサブエージェントにテストを委譲;
+        :テストTaskごとにサブエージェントでテストを実行;
+
+        if (テストOK?) then (はい)
+            :実装完了;
+        else (いいえ)
+            :修正Planを作成;
+        endif
+
+        |実装者|
+        :テストレビューを実施;
+        :レビュー結果をインプット;
+    repeat while(修正が必要?) is (はい)
+
+    |レビュアー|
+    :実装・テストレビュー;
+repeat while(修正が必要?) is (はい)
+
+|生成AI|
+:実装・テストレビュー結果を分析;
+:不足しているルールをAGENTS.md、skillに反映;
+
+stop
+
+@enduml

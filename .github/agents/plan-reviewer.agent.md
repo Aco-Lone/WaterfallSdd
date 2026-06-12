@@ -4,6 +4,10 @@ name: "plan-reviewer"
 tools: [read, search]
 argument-hint: "承認済み詳細設計書と実装プランおよびテストプランを入力してください"
 handoffs:
+  - label: "Create Implementation Execution"
+    agent: "implementation-executor"
+    prompt: "G2 Approved のため実装を開始してください。承認済み Implementation Plan と Test Plan を前提に、PLN / REQ / DSG / REV のトレーサビリティを維持してください。"
+    send: false
   - label: "Update Implementation Plan for Rework"
     agent: "implementation-planner"
     prompt: "プランレビュー結果を反映して実装プランを更新してください。対象の requirement ID、design element ID、plan item ID のトレーサビリティを維持してください。"
