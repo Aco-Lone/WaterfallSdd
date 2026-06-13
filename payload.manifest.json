@@ -1,0 +1,21 @@
+{
+  "payloadPaths": [
+    ".github/agents",
+    ".github/hooks",
+    ".github/prompts",
+    ".github/skills",
+    "docs/superpowers/guides",
+    "scripts/openspec-bootstrap-hook.ps1",
+    "scripts/traceability-hook.ps1",
+    "scripts/traceability-validator.ps1",
+    "templates/detailed-design.md",
+    "templates/implementation-plan.md",
+    "templates/review-record.md",
+    "templates/skill.md",
+    "templates/subsystem-spec.md",
+    "templates/test-plan.md",
+    "README.md",
+    "spec-driven-development-options.md",
+    "workflow-approval-gate-definition.md"
+  ]
+}

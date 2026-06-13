@@ -1,0 +1,45 @@
+{
+  "name": "@aco-lone/waterfall-sdd-bootstrap",
+  "version": "0.1.0",
+  "description": "Bootstrap package that installs OpenSpec Waterfall workflow assets into the current workspace.",
+  "type": "module",
+  "private": false,
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Aco-Lone/WaterfallSdd.git"
+  },
+  "keywords": [
+    "openspec",
+    "waterfall",
+    "copilot",
+    "workflow",
+    "bootstrap"
+  ],
+  "files": [
+    ".github/agents",
+    ".github/hooks",
+    ".github/prompts",
+    ".github/skills",
+    "docs/superpowers/guides",
+    "scripts/openspec-bootstrap-hook.ps1",
+    "scripts/traceability-hook.ps1",
+    "scripts/traceability-validator.ps1",
+    "templates/detailed-design.md",
+    "templates/implementation-plan.md",
+    "templates/review-record.md",
+    "templates/skill.md",
+    "templates/subsystem-spec.md",
+    "templates/test-plan.md",
+    "README.md",
+    "spec-driven-development-options.md",
+    "workflow-approval-gate-definition.md",
+    "payload.manifest.json",
+    "tools/install.mjs",
+    "tools/postinstall.mjs"
+  ],
+  "scripts": {
+    "postinstall": "node ./tools/postinstall.mjs",
+    "test": "node --test tests/npm/install.test.mjs"
+  }
+}

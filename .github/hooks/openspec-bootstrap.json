@@ -1,0 +1,12 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "type": "command",
+        "windows": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts\\openspec-bootstrap-hook.ps1",
+        "cwd": ".",
+        "timeout": 15
+      }
+    ]
+  }
+}
