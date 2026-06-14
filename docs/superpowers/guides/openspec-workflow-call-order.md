@@ -19,11 +19,25 @@ flowchart TD
     B --> C[2. detailed-design-author prompt]
     C --> D[3. design-reviewer prompt]
     D -->|承認| E[4. implementation-planner prompt]
+    D -->|承認| M[5. test-planner prompt]
     D -->|差戻し| C
-    E --> F[5. plan-reviewer prompt]
+    E --> F[6. plan-reviewer prompt]
+    M --> F
     F -->|承認| G[実装・テスト開始]
     F -->|プラン修正| E
     F -->|設計修正| C
+    G --> H[7. implementation-executor prompt]
+    H --> I[8. implementation-reviewer prompt]
+    I -->|承認| J[9. test-executor prompt]
+    I -->|Code差戻し| H
+    I -->|Plan差戻し| E
+    I -->|Design差戻し| C
+    J --> K[10. test-reviewer prompt]
+    K -->|承認| L[11. review-improvement-analyst]
+    K -->|Test差戻し| J
+    K -->|Code差戻し| H
+    K -->|Plan差戻し| E
+    K -->|Design差戻し| C
 ```
 
 ## 3. 呼び出し順
@@ -180,7 +194,9 @@ flowchart TD
 | 設計構造の問題 | Detailed Design | detailed-design-author | detailed-design-authoring, traceability-mapping |
 | 実装プランだけの問題 | Implementation Plan | implementation-planner | implementation-plan-authoring, csproj-slicing |
 | テストプランだけの問題 | Test Plan | test-planner | test-plan-authoring, traceability-mapping |
-| 戻し先の判断に迷う | レビュー判定補助 | design-reviewer または plan-reviewer | defect-classification, return-target-classification |
+| 実装結果の問題 | Implementation / Code | implementation-executor | implementation-review, implementation-execution-feedback-handling |
+| テスト結果の問題 | Test / Code / Plan | test-executor または test-planner | test-review, test-execution-feedback-handling |
+| 戻し先の判断に迷う | レビュー判定補助 | design-reviewer、plan-reviewer、implementation-reviewer、test-reviewer | defect-classification, return-target-classification |
 
 ## 6. 最短実行順
 
@@ -190,5 +206,10 @@ flowchart TD
 4. implementation-planner
 5. test-planner
 6. plan-reviewer
+7. implementation-executor
+8. implementation-reviewer
+9. test-executor
+10. test-reviewer
+11. review-improvement-analyst
 
-この 6 つを主経路とし、各 phase の内部で必要な skill を適用する。
+この 11 個を主経路とし、各 phase の内部で必要な skill を適用する。

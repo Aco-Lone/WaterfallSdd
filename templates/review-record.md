@@ -54,13 +54,15 @@
 - [ ] Requirement, design, and plan traceability are preserved.
 - [ ] Findings are classified with Design / Plan / Code / Minor Fix.
 - [ ] Post-G2 return targets are summarized.
+- [ ] Next handoff to test execution or rework target is explicit.
 
 ### Test Review
 
 - [ ] Test execution or test changes match the approved test plan.
 - [ ] Requirement, design, and test traceability are preserved.
-- [ ] Findings are classified with Design / Plan / Test / Minor Fix.
+- [ ] Findings are classified with Design / Plan / Test / Code / Minor Fix.
 - [ ] Post-G2 return targets are summarized.
+- [ ] Next handoff to improvement analysis or rework target is explicit.
 
 ## Decision Summary
 

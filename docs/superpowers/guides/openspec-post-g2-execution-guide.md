@@ -8,13 +8,13 @@
 
 - 実行規律は Superpowers の汎用 skill を優先して再利用する
 - OpenSpec 固有の判定は workspace 側で補う
-- 追加する agent は implementation-executor と test-executor の 2 つに限定する
-- 追加する skill は implementation-execution-feedback-handling と test-execution-feedback-handling の 2 つに限定する
+- post-G2 の agent は implementation-executor、implementation-reviewer、test-executor、test-reviewer で分担する
+- post-G2 の skill は implementation-review、implementation-execution-feedback-handling、test-review、test-execution-feedback-handling を使う
 - 改善分析は review-driven-improvement と review-improvement-analyst でまとめる
 
 ## 2. 適用範囲
 
-本書は、[OpenSpec ワークフローにおける skill / prompt 呼び出し順手順書](openspec-workflow-call-order.md) の Step 6 で G2 Approved になった後から、実装・テスト完了および改善分析の要否判断までに適用する。
+本書は、[OpenSpec ワークフローにおける skill / prompt 呼び出し順手順書](openspec-workflow-call-order.md) の Step 6 で G2 Approved になった後から、実装レビュー、テストレビュー、および改善分析の要否判断までに適用する。
 
 対象外は次のとおりである。
 
@@ -38,9 +38,11 @@
 ```mermaid
 flowchart TD
     A[G2 Approved] --> B[7. Implementation Execution]
-    B --> C[8. Test Execution]
-    C --> D[9. Review Driven Improvement]
-    D --> E[完了判定]
+    B --> C[8. Implementation Review]
+    C --> D[9. Test Execution]
+    D --> E[10. Test Review]
+    E --> F[11. Review Driven Improvement]
+    F --> G[完了判定]
 ```
 
 ### Step 7. Implementation Execution
@@ -62,10 +64,23 @@ flowchart TD
 - 出力:
   - 実装結果
   - 変更済み PLN の状態
-  - レビュー指摘の修正 Plan 化結果
+  - implementation-reviewer への handoff
   - traceability 更新結果
 
-### Step 8. Test Execution
+### Step 8. Implementation Review
+
+- 主 prompt: implementation-reviewer
+- 主な役割: 実装結果が承認済み Detailed Design と Implementation Plan に沿っているかをレビューする
+- 使う workspace skill:
+  - implementation-review
+  - implementation-execution-feedback-handling
+- 出力:
+  - Implementation Review 記録
+  - PLN coverage summary
+  - Design / Plan / Code / Minor Fix の戻し先判定
+  - test-executor または差戻し先への handoff
+
+### Step 9. Test Execution
 
 - 主 prompt: test-executor
 - 主な役割: 承認済み Test Plan を読み、TST 単位でテスト作成・実行・結果判定を進める
@@ -85,9 +100,23 @@ flowchart TD
   - テスト結果
   - 変更済み TST の状態
   - 失敗要因の判定結果
+  - test-reviewer への handoff
   - traceability 更新結果
 
-### Step 9. Review Driven Improvement
+### Step 10. Test Review
+
+- 主 prompt: test-reviewer
+- 主な役割: テスト実行結果が承認済み Test Plan に沿っているかをレビューし、失敗や未実行の戻し先を分類する
+- 使う workspace skill:
+  - test-review
+  - test-execution-feedback-handling
+- 出力:
+  - Test Review 記録
+  - TST execution coverage summary
+  - Design / Plan / Test / Code / Minor Fix の戻し先判定
+  - review-improvement-analyst または差戻し先への handoff
+
+### Step 11. Review Driven Improvement
 
 - 主 agent / skill:
   - review-improvement-analyst
@@ -119,7 +148,9 @@ Superpowers 側は、実行手順そのものと作業の安全性を担う。Op
 workspace 側は、OpenSpec 固有の戻し先判定、トレーサビリティ、成果物形式、handoff を担う。
 
 - implementation-execution-feedback-handling: 実装レビュー指摘を REQ / DSG / PLN / REV に結び、Design / Plan / Code / Minor Fix の戻し先を判定する
-- test-execution-feedback-handling: テストレビュー指摘を REQ / DSG / TST / REV に結び、Design / Test / Code / Minor Fix の戻し先を判定する
+- implementation-review: 実装結果を承認済み Detailed Design / Implementation Plan / G2 review record に照らしてレビューする
+- test-execution-feedback-handling: テストレビュー指摘を REQ / DSG / TST / REV に結び、Design / Plan / Test / Code / Minor Fix の戻し先を判定する
+- test-review: テスト実行結果を承認済み Test Plan と失敗分析に照らしてレビューする
 - review-driven-improvement: レビュー結果を改善分析へ回し、再発防止の要否を判断する
 
 ## 6. PLN / TST の粒度基準
@@ -190,7 +221,9 @@ PLN と TST は、実行可能で、かつレビューで追跡できる最小�
 本ガイドに従う実行が完了したとみなす条件は次のとおりである。
 
 - 全 PLN が完了している
+- Implementation Review が Approved である
 - 全 TST が完了している
+- Test Review が Approved である
 - 必要な検証が通過している
 - レビュー指摘が Closed になっている
 - traceability が更新済みである

@@ -4,20 +4,50 @@
 
 本書は、OpenSpec 向け Waterfall ワークフローで使用する skill と prompt の役割を一覧で確認できるようにするための参照資料である。
 
-## 2. prompt 一覧
+## 2. prompt / custom agent 一覧
 
-| Prompt | 役割 | 主な入力 | 主な出力 | 関連 skill |
+| Prompt / Agent | 役割 | 主な入力 | 主な出力 | 関連 skill |
 | --- | --- | --- | --- | --- |
+| project-onboarding-analyst | 未導入の既存プロジェクトを分析し、OpenSpec Waterfall へ適応する導入方針を作成する | 既存プロジェクトのパス、README、既存仕様、目的 | 導入分析レポート、Subsystem 候補、要件候補、未解決質問、次工程 handoff | subsystem-requirements-refinement, traceability-mapping |
+| requirements-subsystem-spec-digger | 任意の事前作業として、未整理の要求を深掘りして Subsystem Spec ドラフトへ整える | 要求、上位設計メモ、背景、制約、未整理の仕様案 | Dig summary、Draft Subsystem Spec、要件 ID、受け入れ条件、スコープ境界、未解決事項 | dig, subsystem-requirements-refinement, acceptance-criteria-check |
 | subsystem-spec-author | 上位設計からサブシステム仕様を作成または更新する | サブシステム要件、制約、非機能要件 | Subsystem Spec、要件 ID、受け入れ条件、未決事項 | subsystem-requirements-refinement, acceptance-criteria-check |
 | detailed-design-author | 承認済み仕様から詳細設計書を作成または更新する | 承認済み Subsystem Spec、対象 csproj | Detailed Design、設計要素 ID、要件対応表、図、エラー設計、テスト設計 | detailed-design-authoring, traceability-mapping |
 | design-reviewer | G1 設計レビューを実施する | Subsystem Spec、Detailed Design | G1 レビュー記録、指摘分類、承認可否 | design-gate-review, defect-classification |
 | implementation-planner | 承認済み設計から実装プランを作成または更新する | 承認済み Detailed Design、対象 csproj | Implementation Plan、PLN ID、実装順、環境準備 | implementation-plan-authoring, csproj-slicing |
 | test-planner | 承認済み設計からテストプランを作成または更新する | 承認済み Detailed Design、対象 csproj | Test Plan、TST ID、テスト順、テスト準備 | test-plan-authoring, traceability-mapping |
 | plan-reviewer | G2 プランレビューを実施する | 承認済み Detailed Design、Implementation Plan、Test Plan | G2 レビュー記録、指摘分類、承認可否 | plan-gate-review, return-target-classification |
-| implementation-executor | G2 Approved 後に承認済み実装プランを PLN 単位で実行する | 承認済み Detailed Design、Implementation Plan、Test Plan、G2 review record | 実装結果、PLN 実行状況、レビュー指摘の修正 Plan 化、完了ハンドオフ | using-git-worktrees, subagent-driven-development, executing-plans, test-driven-development, requesting-code-review, receiving-code-review, systematic-debugging, verification-before-completion, finishing-a-development-branch |
-| test-executor | 実装完了後に承認済み Test Plan を TST 単位で実行する | 承認済み Detailed Design、Implementation Plan、Test Plan、実装結果、レビュー記録 | テスト結果、TST 実行状況、失敗要因判定、改善分析向けハンドオフ | using-git-worktrees, subagent-driven-development, executing-plans, test-driven-development, requesting-code-review, receiving-code-review, systematic-debugging, verification-before-completion, finishing-a-development-branch |
+| implementation-executor | G2 Approved 後に承認済み実装プランを PLN 単位で実行する | 承認済み Detailed Design、Implementation Plan、Test Plan、G2 review record | 実装結果、PLN 実行状況、実装レビュー向けハンドオフ | using-git-worktrees, subagent-driven-development, executing-plans, test-driven-development, requesting-code-review, receiving-code-review, systematic-debugging, verification-before-completion, finishing-a-development-branch |
+| implementation-reviewer | 実装完了後に実装レビューを実施する | 承認済み Detailed Design、Implementation Plan、Test Plan、G2 review record、実装結果、変更ファイル | Implementation Review 記録、PLN coverage、戻し先判定、次 handoff | implementation-review, implementation-execution-feedback-handling |
+| test-executor | Implementation Review Approved 後に承認済み Test Plan を TST 単位で実行する | 承認済み Detailed Design、Implementation Plan、Test Plan、実装結果、実装レビュー記録 | テスト結果、TST 実行状況、失敗要因判定、テストレビュー向けハンドオフ | using-git-worktrees, subagent-driven-development, executing-plans, test-driven-development, requesting-code-review, receiving-code-review, systematic-debugging, verification-before-completion, finishing-a-development-branch |
+| test-reviewer | テスト実行後にテストレビューを実施する | 承認済み Detailed Design、Implementation Plan、Test Plan、実装レビュー記録、テスト実行結果、失敗分析 | Test Review 記録、TST coverage、戻し先判定、改善分析向け handoff | test-review, test-execution-feedback-handling |
+| review-improvement-analyst | レビュー完了後に再発原因を分析し、workspace skill や custom instructions の改善要否を提案する | 実装レビュー記録、テストレビュー記録、関連成果物、改善候補ファイル | recurring cause summary、更新対象候補、再発防止効果、未解決事項 | review-driven-improvement, defect-classification, return-target-classification |
 
-Step 7-9 に該当する post-G2 実行の詳細は [OpenSpec G2 後実行ガイド](openspec-post-g2-execution-guide.md) を参照する。
+Step 7 以降に該当する post-G2 実行とレビューの詳細は [OpenSpec G2 後実行ガイド](openspec-post-g2-execution-guide.md) を参照する。
+
+### 2.0 project-onboarding-analyst
+
+- 用途: 未導入の既存プロジェクトを読み取り、OpenSpec Waterfall に載せるための初期分析を行う
+- 強制すること:
+  - 既存コードや業務文書を勝手に変更しない
+  - コードから推測した要件を正式要件として扱わない
+  - 導入分析ファイルやドラフト仕様を作成する場合は証拠と未解決事項を明示する
+- 向いている場面:
+  - 既存プロジェクトへこのプラグインを初めて導入する前
+  - README、既存仕様、実装済み機能から Subsystem Spec 作成の材料を整理する時
+  - 次に requirements-subsystem-spec-digger または subsystem-spec-author へ渡す材料を作る時
+
+### 2.0.1 requirements-subsystem-spec-digger
+
+- 用途: 未整理の要求や上位設計メモを、任意の事前作業として Subsystem Spec ドラフトへ整える
+- 強制すること:
+  - mandatory Waterfall workflow の正式 step や approval gate として扱わない
+  - 調べれば分かることは質問せず、関連ファイルを確認してから 1 問ずつ深掘りする
+  - 不明な業務ルールは補完せず、未解決事項として残す
+  - 要求意図、スコープ境界、actor、trigger、観測可能な結果、受け入れ条件を明確にする
+- 向いている場面:
+  - 要求が粗く、subsystem-spec-author に渡す前に論点を掘り下げたい時
+  - 複数サブシステムが混ざっている可能性を切り分けたい時
+  - Draft Subsystem Spec と未解決事項を作って、正式な仕様作成へ渡したい時
 
 ### 2.1 subsystem-spec-author
 
@@ -89,24 +119,57 @@ Step 7-9 に該当する post-G2 実行の詳細は [OpenSpec G2 後実行ガイ
 - 強制すること:
   - REQ / DSG / PLN / REV の対応維持
   - 実装結果とレビュー指摘の修正 Plan 化
-  - 実装完了後の test-executor への handoff
+  - 実装完了後の implementation-reviewer への handoff
 - 向いている場面:
   - G2 承認直後の実装開始
 
-### 2.8 test-executor
+### 2.8 implementation-reviewer
 
-- 用途: 実装完了後に承認済み Test Plan を TST 単位で実行する
+- 用途: 実装完了後に Implementation Review を実施する
+- 強制すること:
+  - 実装結果と承認済み設計・実装プランの照合
+  - REQ / DSG / PLN / REV の対応維持
+  - Design / Plan / Code / Minor Fix の戻し先判定
+- 向いている場面:
+  - テスト実行へ進む前の実装レビュー
+
+### 2.9 test-executor
+
+- 用途: Implementation Review Approved 後に承認済み Test Plan を TST 単位で実行する
 - 強制すること:
   - REQ / DSG / TST / REV の対応維持
   - 失敗要因の判定と戻し先の明示
+  - test-reviewer への handoff
+- 向いている場面:
+  - 実装レビュー承認後のテスト実行
+
+### 2.10 test-reviewer
+
+- 用途: テスト実行後に Test Review を実施する
+- 強制すること:
+  - REQ / DSG / TST / REV の対応維持
+  - 失敗要因と未実行 TST の戻し先判定
   - review-improvement-analyst への handoff
 - 向いている場面:
-  - 実装完了後のテスト実行
+  - 改善分析へ進む前のテストレビュー
+
+### 2.11 review-improvement-analyst
+
+- 用途: 実装レビューやテストレビューの結果から、再発防止として workspace 側の skill / prompt / custom instructions を更新すべきか分析する
+- 強制すること:
+  - 一回限りの局所不具合を reusable guidance 更新として扱わない
+  - Review ID、要件 ID、設計要素 ID、Plan / Test ID を維持して指摘を正規化する
+  - 頻度と重大度に基づいて、症状ではなく根本原因を分類する
+  - 更新対象ファイル、変更種別、根拠、期待する再発防止効果を明示する
+- 向いている場面:
+  - Implementation Review または Test Review の承認後に改善分析を行う時
+  - 同種の指摘が複数回出て、工程ルールや agent guidance の改善余地を判断したい時
 
 ## 3. skill 一覧
 
 | Skill | 役割 | 主な使いどころ | 主な確認点 |
 | --- | --- | --- | --- |
+| dig | プラン、設計、技術判断を 1 問ずつ深掘りして共通理解を作る | 要求や設計の曖昧さを詰める任意の事前対話 | 調査済み前提、1 問 1 論点、推奨回答、未解決事項 |
 | subsystem-requirements-refinement | 要件文の正規化と要件 ID の安定化 | サブシステム仕様作成前 | 一意な要件 ID、1 要件 1 意図 |
 | acceptance-criteria-check | 受け入れ条件の観測可能性を点検 | サブシステム仕様作成中 / G1 前 | 各要件 ID に判定可能な条件がある |
 | detailed-design-authoring | 仕様から詳細設計を構成 | 詳細設計書作成時 | 設計要素、図、エラー、テストの整合 |
@@ -118,8 +181,19 @@ Step 7-9 に該当する post-G2 実行の詳細は [OpenSpec G2 後実行ガイ
 | csproj-slicing | csproj 単位に作業を切る | プラン作成時 | 作業単位の依存、並行可否、責務境界 |
 | plan-gate-review | G2 プランレビュー観点を適用 | G2 実施時 | 未トレース要件 / 設計要素、実行順、粒度 |
 | return-target-classification | 指摘の差戻し先を決める | G2 や再レビュー時 | Detailed Design に戻すか、Plan で閉じるか |
+| implementation-review | 実装レビュー観点を適用 | G2 後の実装レビュー時 | PLN coverage、設計・計画整合、検証証跡、REQ / DSG / PLN / REV |
 | implementation-execution-feedback-handling | 実装レビュー指摘の戻し先を判定 | G2 後の実装実行・再レビュー時 | REQ / DSG / PLN / REV の対応、Design / Plan / Code / Minor Fix |
-| test-execution-feedback-handling | テストレビュー指摘の戻し先を判定 | G2 後のテスト実行・再レビュー時 | REQ / DSG / TST / REV の対応、Design / Test / Code / Minor Fix |
+| test-review | テストレビュー観点を適用 | G2 後のテストレビュー時 | TST coverage、期待結果整合、失敗分析、REQ / DSG / TST / REV |
+| test-execution-feedback-handling | テストレビュー指摘の戻し先を判定 | G2 後のテスト実行・再レビュー時 | REQ / DSG / TST / REV の対応、Design / Plan / Test / Code / Minor Fix |
+| review-driven-improvement | レビュー結果から再発防止の改善対象を判断 | 実装レビューやテストレビュー完了後の改善分析 | Review ID 根拠、原因分類、更新対象、再発防止効果 |
+
+### 3.0 dig
+
+- 役割: 要求、設計、計画、技術判断の曖昧さを、調査済み前提に基づく 1 問ずつの質問で掘り下げる
+- 主な効果:
+  - 要求意図や判断依存関係の明確化
+  - 推奨回答付きの選択肢提示
+  - 決定事項、未解決事項、前提の整理
 
 ### 3.1 subsystem-requirements-refinement
 
@@ -174,14 +248,22 @@ Step 7-9 に該当する post-G2 実行の詳細は [OpenSpec G2 後実行ガイ
   - 実装順とテスト順の構成
   - リスクと準備の明示
 
-### 3.8 csproj-slicing
+### 3.8 test-plan-authoring
+
+- 役割: 承認済み詳細設計を、設計判断を変えずに実行可能なテストプランへ変換する
+- 主な効果:
+  - test item と TST ID の付与
+  - テスト実行順序、テストデータ、環境準備、リスクの整理
+  - REQ / DSG / TST の対応付け
+
+### 3.9 csproj-slicing
 
 - 役割: 作業を csproj 単位で切り出す
 - 主な効果:
   - 依存関係に応じた作業単位整理
   - 並行可能範囲の明示
 
-### 3.9 plan-gate-review
+### 3.10 plan-gate-review
 
 - 役割: G2 レビュー観点を固定する
 - 主な効果:
@@ -189,26 +271,48 @@ Step 7-9 に該当する post-G2 実行の詳細は [OpenSpec G2 後実行ガイ
   - 未トレース要件 ID / 設計要素 ID の検出
   - 実行性と粒度の点検
 
-### 3.10 return-target-classification
+### 3.11 return-target-classification
 
 - 役割: G2 指摘の戻し先を決める
 - 主な効果:
   - Detailed Design へ戻すべき指摘の抽出
   - Plan 内で閉じる指摘の分離
 
-### 3.11 implementation-execution-feedback-handling
+### 3.12 implementation-review
+
+- 役割: 実装レビュー観点を固定する
+- 主な効果:
+  - 実装結果と承認済み設計・実装プランの照合
+  - PLN coverage と検証証跡の確認
+
+### 3.13 implementation-execution-feedback-handling
 
 - 役割: 実装レビュー指摘の戻し先を判定する
 - 主な効果:
   - REQ / DSG / PLN / REV の対応維持
   - Design / Plan / Code / Minor Fix の判定基準を固定する
 
-### 3.12 test-execution-feedback-handling
+### 3.14 test-review
+
+- 役割: テストレビュー観点を固定する
+- 主な効果:
+  - テスト実行結果と承認済み Test Plan の照合
+  - TST coverage と失敗分析の確認
+
+### 3.15 test-execution-feedback-handling
 
 - 役割: テストレビュー指摘の戻し先を判定する
 - 主な効果:
   - REQ / DSG / TST / REV の対応維持
-  - Design / Test / Code / Minor Fix の判定基準を固定する
+  - Design / Plan / Test / Code / Minor Fix の判定基準を固定する
+
+### 3.16 review-driven-improvement
+
+- 役割: 実装レビューやテストレビューの指摘から、再発防止として reusable guidance を更新すべきか判断する
+- 主な効果:
+  - Review ID と関連 ID を保った指摘の正規化
+  - 頻度と重大度に基づく根本原因の分類
+  - skill、custom instructions、成果物修正のみのどれで扱うべきかの切り分け
 
 ## 4. 推奨する見方
 
