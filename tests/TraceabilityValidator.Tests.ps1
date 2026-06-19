@@ -124,6 +124,223 @@ Describe 'Test-TraceabilityDocument' {
     }
 }
 
+Describe 'Test-TraceabilityDocument spec delta and impact map' {
+    function New-BaselineSpec {
+        param([string]$Root)
+
+        $specDirectory = Join-Path $Root 'openspec/specs'
+        New-Item -ItemType Directory -Path $specDirectory -Force | Out-Null
+        $specPath = Join-Path $specDirectory 'subsystem-spec.md'
+        @'
+# Baseline Subsystem Spec
+
+## Requirements
+
+| Requirement ID | Type | Requirement | Rationale | Acceptance Criteria | Priority | Status | Source |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| REQ-001 | Functional | Existing requirement |  | Criteria | Must | Approved |  |
+| REQ-003 | Functional | Another requirement |  | Criteria | Must | Approved |  |
+'@ | Set-Content -Path $specPath -Encoding UTF8
+
+        return $specPath
+    }
+
+    It 'accepts a spec delta with valid operations against the baseline' {
+        $changeDirectory = Join-Path $TestDrive 'openspec/changes/change-a'
+        New-Item -ItemType Directory -Path $changeDirectory -Force | Out-Null
+        New-BaselineSpec -Root $TestDrive | Out-Null
+
+        $filePath = Join-Path $changeDirectory 'spec-delta.md'
+        @'
+# Spec Delta
+
+## Spec Delta
+
+| Delta ID | Operation | Requirement ID | Requirement | Acceptance Criteria | Rationale |
+| --- | --- | --- | --- | --- | --- |
+| DLT-001 | ADDED | REQ-010 | New requirement | Criteria | Reason |
+| DLT-002 | MODIFIED | REQ-003 | Updated requirement | Criteria | Reason |
+| DLT-003 | REMOVED | REQ-001 |  |  | Reason |
+'@ | Set-Content -Path $filePath -Encoding UTF8
+
+        $result = Test-TraceabilityDocument -FilePath $filePath
+
+        $result.DocumentType | Should Be 'SpecDelta'
+        $result.IsValid | Should Be $true
+    }
+
+    It 'flags an ADDED requirement that already exists in the baseline' {
+        $changeDirectory = Join-Path $TestDrive 'openspec/changes/change-b'
+        New-Item -ItemType Directory -Path $changeDirectory -Force | Out-Null
+        New-BaselineSpec -Root $TestDrive | Out-Null
+
+        $filePath = Join-Path $changeDirectory 'spec-delta.md'
+        @'
+# Spec Delta
+
+## Spec Delta
+
+| Delta ID | Operation | Requirement ID | Requirement | Acceptance Criteria | Rationale |
+| --- | --- | --- | --- | --- | --- |
+| DLT-001 | ADDED | REQ-001 | Duplicate add | Criteria | Reason |
+'@ | Set-Content -Path $filePath -Encoding UTF8
+
+        $result = Test-TraceabilityDocument -FilePath $filePath
+
+        $result.IsValid | Should Be $false
+        ($result.Errors -join "`n") | Should Match 'ADDED requirement already exists'
+    }
+
+    It 'flags a MODIFIED requirement that is missing from the baseline' {
+        $changeDirectory = Join-Path $TestDrive 'openspec/changes/change-c'
+        New-Item -ItemType Directory -Path $changeDirectory -Force | Out-Null
+        New-BaselineSpec -Root $TestDrive | Out-Null
+
+        $filePath = Join-Path $changeDirectory 'spec-delta.md'
+        @'
+# Spec Delta
+
+## Spec Delta
+
+| Delta ID | Operation | Requirement ID | Requirement | Acceptance Criteria | Rationale |
+| --- | --- | --- | --- | --- | --- |
+| DLT-001 | MODIFIED | REQ-999 | Update missing | Criteria | Reason |
+'@ | Set-Content -Path $filePath -Encoding UTF8
+
+        $result = Test-TraceabilityDocument -FilePath $filePath
+
+        $result.IsValid | Should Be $false
+        ($result.Errors -join "`n") | Should Match 'MODIFIED requirement not found'
+    }
+
+    It 'flags an invalid delta operation value' {
+        $changeDirectory = Join-Path $TestDrive 'openspec/changes/change-d'
+        New-Item -ItemType Directory -Path $changeDirectory -Force | Out-Null
+        New-BaselineSpec -Root $TestDrive | Out-Null
+
+        $filePath = Join-Path $changeDirectory 'spec-delta.md'
+        @'
+# Spec Delta
+
+## Spec Delta
+
+| Delta ID | Operation | Requirement ID | Requirement | Acceptance Criteria | Rationale |
+| --- | --- | --- | --- | --- | --- |
+| DLT-001 | CHANGED | REQ-003 | Wrong operation | Criteria | Reason |
+'@ | Set-Content -Path $filePath -Encoding UTF8
+
+        $result = Test-TraceabilityDocument -FilePath $filePath
+
+        $result.IsValid | Should Be $false
+        ($result.Errors -join "`n") | Should Match 'Invalid delta operation'
+    }
+
+    It 'accepts an impact map that maps every delta requirement' {
+        $changeDirectory = Join-Path $TestDrive 'openspec/changes/change-e'
+        New-Item -ItemType Directory -Path $changeDirectory -Force | Out-Null
+
+        @'
+# Spec Delta
+
+## Spec Delta
+
+| Delta ID | Operation | Requirement ID | Requirement | Acceptance Criteria | Rationale |
+| --- | --- | --- | --- | --- | --- |
+| DLT-001 | ADDED | REQ-010 | New requirement | Criteria | Reason |
+'@ | Set-Content -Path (Join-Path $changeDirectory 'spec-delta.md') -Encoding UTF8
+
+        $filePath = Join-Path $changeDirectory 'impact-map.md'
+        @'
+# Impact Map
+
+## Impact Map
+
+| Impact ID | Requirement ID | Operation | Affected csproj | Affected Design Element IDs | Affected Plan Item IDs | Affected Test IDs | Re-review Required | Gate Record |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| IMP-001 | REQ-010 | ADDED | Sample.Core | DSG-001 | PLN-001 | TST-001 | Yes | reviews/REV-001.md |
+'@ | Set-Content -Path $filePath -Encoding UTF8
+
+        $result = Test-TraceabilityDocument -FilePath $filePath
+
+        $result.DocumentType | Should Be 'ChangeImpactMap'
+        $result.IsValid | Should Be $true
+    }
+
+    It 'flags an impact map that omits a delta requirement' {
+        $changeDirectory = Join-Path $TestDrive 'openspec/changes/change-f'
+        New-Item -ItemType Directory -Path $changeDirectory -Force | Out-Null
+
+        @'
+# Spec Delta
+
+## Spec Delta
+
+| Delta ID | Operation | Requirement ID | Requirement | Acceptance Criteria | Rationale |
+| --- | --- | --- | --- | --- | --- |
+| DLT-001 | ADDED | REQ-010 | New requirement | Criteria | Reason |
+| DLT-002 | ADDED | REQ-011 | Another requirement | Criteria | Reason |
+'@ | Set-Content -Path (Join-Path $changeDirectory 'spec-delta.md') -Encoding UTF8
+
+        $filePath = Join-Path $changeDirectory 'impact-map.md'
+        @'
+# Impact Map
+
+## Impact Map
+
+| Impact ID | Requirement ID | Operation | Affected csproj | Affected Design Element IDs | Affected Plan Item IDs | Affected Test IDs | Re-review Required | Gate Record |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| IMP-001 | REQ-010 | ADDED | Sample.Core | DSG-001 | PLN-001 | TST-001 | Yes | reviews/REV-001.md |
+'@ | Set-Content -Path $filePath -Encoding UTF8
+
+        $result = Test-TraceabilityDocument -FilePath $filePath
+
+        $result.IsValid | Should Be $false
+        ($result.Errors -join "`n") | Should Match 'not mapped in impact map'
+    }
+
+    It 'flags an ADDED impact row without an affected csproj' {
+        $changeDirectory = Join-Path $TestDrive 'openspec/changes/change-g'
+        New-Item -ItemType Directory -Path $changeDirectory -Force | Out-Null
+
+        $filePath = Join-Path $changeDirectory 'impact-map.md'
+        @'
+# Impact Map
+
+## Impact Map
+
+| Impact ID | Requirement ID | Operation | Affected csproj | Affected Design Element IDs | Affected Plan Item IDs | Affected Test IDs | Re-review Required | Gate Record |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| IMP-001 | REQ-010 | ADDED |  | DSG-001 | PLN-001 | TST-001 | Yes | reviews/REV-001.md |
+'@ | Set-Content -Path $filePath -Encoding UTF8
+
+        $result = Test-TraceabilityDocument -FilePath $filePath
+
+        $result.IsValid | Should Be $false
+        ($result.Errors -join "`n") | Should Match 'Affected csproj missing'
+    }
+
+    It 'flags a REMOVED impact row that does not require re-review' {
+        $changeDirectory = Join-Path $TestDrive 'openspec/changes/change-h'
+        New-Item -ItemType Directory -Path $changeDirectory -Force | Out-Null
+
+        $filePath = Join-Path $changeDirectory 'impact-map.md'
+        @'
+# Impact Map
+
+## Impact Map
+
+| Impact ID | Requirement ID | Operation | Affected csproj | Affected Design Element IDs | Affected Plan Item IDs | Affected Test IDs | Re-review Required | Gate Record |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| IMP-001 | REQ-001 | REMOVED | Sample.Core | DSG-001 | PLN-001 | TST-001 | No |  |
+'@ | Set-Content -Path $filePath -Encoding UTF8
+
+        $result = Test-TraceabilityDocument -FilePath $filePath
+
+        $result.IsValid | Should Be $false
+        ($result.Errors -join "`n") | Should Match 'must require re-review'
+    }
+}
+
 Describe 'Invoke-TraceabilityHook' {
     It 'blocks post tool processing when an edited markdown artifact has traceability errors' {
         $filePath = Join-Path $TestDrive 'detailed-design.md'

@@ -8,7 +8,7 @@
 
 - 実行規律は Superpowers の汎用 skill を優先して再利用する
 - OpenSpec 固有の判定は workspace 側で補う
-- post-G2 の agent は implementation-executor、implementation-reviewer、test-executor、test-reviewer で分担する
+- post-G2 のエージェントは implementation-orchestrator と test-orchestrator が各フェーズ全体を調整し、implementation-executor / implementation-reviewer、test-executor / test-reviewer をサブエージェントとして内部で呼び出す
 - post-G2 の skill は implementation-review、implementation-execution-feedback-handling、test-review、test-execution-feedback-handling を使う
 - 改善分析は review-driven-improvement と review-improvement-analyst でまとめる
 
@@ -37,57 +37,46 @@
 
 ```mermaid
 flowchart TD
-    A[G2 Approved] --> B[7. Implementation Execution]
-    B --> C[8. Implementation Review]
-    C --> D[9. Test Execution]
-    D --> E[10. Test Review]
-    E --> F[11. Review Driven Improvement]
-    F --> G[完了判定]
+    A[G2 Approved] --> B["7–8. 実装フェーズ (implementation-orchestrator)"]
+    B --> C["9–10. テストフェーズ (test-orchestrator)"]
+    C --> D[11. Review Driven Improvement]
+    D --> G["G3 アーカイブゲート（変更ライフサイクル時のみ）"]
+    G --> E[完了判定]
 ```
 
-### Step 7. Implementation Execution
+### Step 7–8. 実装フェーズ
 
-- 主 prompt: implementation-executor
-- 主な役割: 承認済み Implementation Plan を読み、PLN 単位で実装実行を進める
-- 使う Superpowers skill:
+- 主 prompt: implementation-orchestrator
+- 主な役割: 実装フェーズ全体（execution → review → ループ）を調整する。implementation-executor と implementation-reviewer を内部でサブエージェントとして順次呼び出し、コードレベルの差戻しは自動的にループし、Design / Plan 差戻しはハンドオフで停止する
+- 内部で呼び出すエージェント:
+  - **implementation-executor**: PLN 単位の実装実行。PLN ごとに implementer → spec compliance reviewer → code quality reviewer の 3 段階サブエージェントをオーケストレーションし、最後に final code reviewer サブエージェントを派遣する
+  - **implementation-reviewer**: 実装結果を承認済み Detailed Design と Implementation Plan に照らしてレビューし、戻し先を判定する
+- 使う Superpowers skill（executor 経由）:
   - using-git-worktrees
-  - subagent-driven-development
-  - executing-plans
   - test-driven-development
   - requesting-code-review
   - receiving-code-review
   - systematic-debugging
   - verification-before-completion
   - finishing-a-development-branch
-- 使う workspace skill:
-  - implementation-execution-feedback-handling
-- 出力:
-  - 実装結果
-  - 変更済み PLN の状態
-  - implementation-reviewer への handoff
-  - traceability 更新結果
-
-### Step 8. Implementation Review
-
-- 主 prompt: implementation-reviewer
-- 主な役割: 実装結果が承認済み Detailed Design と Implementation Plan に沿っているかをレビューする
 - 使う workspace skill:
   - implementation-review
   - implementation-execution-feedback-handling
 - 出力:
-  - Implementation Review 記録
-  - PLN coverage summary
-  - Design / Plan / Code / Minor Fix の戻し先判定
-  - test-executor または差戻し先への handoff
+  - ループ回数と指摘サマリ
+  - 最終 Implementation Review 結果（Approved / Rework）
+  - test-orchestrator への handoff または Design / Plan 差戻しハンドオフ
+  - PLN / REQ / DSG / REV traceability サマリ
 
-### Step 9. Test Execution
+### Step 9–10. テストフェーズ
 
-- 主 prompt: test-executor
-- 主な役割: 承認済み Test Plan を読み、TST 単位でテスト作成・実行・結果判定を進める
-- 使う Superpowers skill:
+- 主 prompt: test-orchestrator
+- 主な役割: テストフェーズ全体（execution → review → ループ）を調整する。test-executor と test-reviewer を内部でサブエージェントとして順次呼び出し、テスト / コードレベルの差戻しは自動的にループし、Test Plan / Impl Plan / Design 差戻しはハンドオフで停止する
+- 内部で呼び出すエージェント:
+  - **test-executor**: TST 単位のテスト実行。TST ごとに test executor → spec compliance reviewer → code quality reviewer の 3 段階サブエージェントをオーケストレーションし、最後に final test reviewer サブエージェントを派遣する
+  - **test-reviewer**: テスト実行結果を承認済み Test Plan に照らしてレビューし、失敗や未実行の戻し先を分類する
+- 使う Superpowers skill（executor 経由）:
   - using-git-worktrees
-  - subagent-driven-development
-  - executing-plans
   - test-driven-development
   - requesting-code-review
   - receiving-code-review
@@ -95,26 +84,13 @@ flowchart TD
   - verification-before-completion
   - finishing-a-development-branch
 - 使う workspace skill:
-  - test-execution-feedback-handling
-- 出力:
-  - テスト結果
-  - 変更済み TST の状態
-  - 失敗要因の判定結果
-  - test-reviewer への handoff
-  - traceability 更新結果
-
-### Step 10. Test Review
-
-- 主 prompt: test-reviewer
-- 主な役割: テスト実行結果が承認済み Test Plan に沿っているかをレビューし、失敗や未実行の戻し先を分類する
-- 使う workspace skill:
   - test-review
   - test-execution-feedback-handling
 - 出力:
-  - Test Review 記録
-  - TST execution coverage summary
-  - Design / Plan / Test / Code / Minor Fix の戻し先判定
-  - review-improvement-analyst または差戻し先への handoff
+  - ループ回数と指摘サマリ
+  - 最終 Test Review 結果（Approved / Rework）
+  - review-improvement-analyst への handoff または差戻しハンドオフ
+  - TST / REQ / DSG / REV traceability サマリ
 
 ### Step 11. Review Driven Improvement
 
@@ -127,6 +103,28 @@ flowchart TD
   - 再発防止が必要な論点
   - workspace 側の skill / prompt の更新要否
 
+### Step G3. アーカイブ（変更ライフサイクル時のみ）
+
+このステップは、既存 baseline に対する変更を `openspec/changes/<change-id>/` の封筒として進めた場合にのみ適用する。新規サブシステムの初回構築では不要である。
+
+- 主 skill: change-archiving
+- 主スクリプト: `scripts/openspec-archive.ps1 <change-id>`
+- 入口条件:
+  - proposal.md の Status が Approved
+  - G1 / G2 / 実装レビュー / テストレビューがすべて承認済み
+  - spec-delta.md と impact-map.md がトレーサビリティ検証をパス
+- 処理内容:
+  - spec-delta を baseline（openspec/specs/subsystem-spec.md）へ畳み込む（ADDED は追記、MODIFIED は更新、REMOVED は Status を Obsolete）
+  - baseline の `## Change History` へ変更履歴を追記
+  - change フォルダを `openspec/changes/archive/<yyyymmdd>-<change-id>/` へ退避
+- 出力:
+  - 更新済み baseline
+  - アーカイブされた不変の change 記録
+- 注意:
+  - baseline はこのアーカイブ操作でのみ更新し、変更中は直接編集しない
+  - archive は hook ではなく明示実行のスクリプトで行う
+  - 詳細は [workflow-approval-gate-definition.md](../../../workflow-approval-gate-definition.md) の §14 / §15 を参照する
+
 ## 5. 使う prompt と skill の分担
 
 ### 5.1 Superpowers skill の分担
@@ -134,8 +132,6 @@ flowchart TD
 Superpowers 側は、実行手順そのものと作業の安全性を担う。OpenSpec 固有の判定はここに入れない。
 
 - using-git-worktrees: main 直作業を避け、作業分離を保つ
-- subagent-driven-development: 独立した作業単位を subagent に委譲する
-- executing-plans: 承認済み plan に従って実行を進める
 - test-driven-development: 実装やテストの最小単位をテスト先行で進める
 - requesting-code-review: 修正後にレビュー依頼へ切り替える
 - receiving-code-review: レビュー指摘を受けた後の受け止め方を整える
@@ -229,6 +225,7 @@ PLN と TST は、実行可能で、かつレビューで追跡できる最小�
 - traceability が更新済みである
 - 改善分析が必要か不要かの判断が済んでいる
 - 改善分析が必要な場合は、review-improvement-analyst への handoff まで終わっている
+- 変更ライフサイクル時は、G3 アーカイブが完了し、baseline 反映と change の退避が済んでいる
 
 ## 11. 参照
 

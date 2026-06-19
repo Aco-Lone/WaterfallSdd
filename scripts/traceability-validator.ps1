@@ -114,6 +114,74 @@ function Test-MarkdownSection {
     return $Content -match $headingPattern
 }
 
+function Resolve-BaselineSpecPath {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath
+    )
+
+    $resolved = Resolve-Path -Path $FilePath -ErrorAction SilentlyContinue
+    $directory = if ($resolved) { Split-Path -Parent $resolved.Path } else { Split-Path -Parent $FilePath }
+
+    while (-not [string]::IsNullOrEmpty($directory)) {
+        $candidates = @(
+            (Join-Path $directory 'openspec/specs/subsystem-spec.md'),
+            (Join-Path $directory 'specs/subsystem-spec.md')
+        )
+
+        foreach ($candidate in $candidates) {
+            if (Test-Path $candidate) {
+                return $candidate
+            }
+        }
+
+        $parent = Split-Path -Parent $directory
+        if ($parent -eq $directory) {
+            break
+        }
+
+        $directory = $parent
+    }
+
+    return $null
+}
+
+function Get-RequirementIdsFromSpec {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$SpecFilePath
+    )
+
+    $content = Get-Content -Path $SpecFilePath -Raw -Encoding UTF8
+    $lines = $content -split "`r?`n"
+    $rows = Get-MarkdownTableRows -Lines $lines -SectionHeading 'Requirements'
+
+    return @($rows |
+        ForEach-Object { if ($_.Count -gt 0) { $_[0] } } |
+        Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+}
+
+function Get-SiblingDeltaRequirementIds {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath
+    )
+
+    $directory = Split-Path -Parent $FilePath
+    $deltaPath = Join-Path $directory 'spec-delta.md'
+    if (-not (Test-Path $deltaPath)) {
+        return $null
+    }
+
+    $content = Get-Content -Path $deltaPath -Raw -Encoding UTF8
+    $lines = $content -split "`r?`n"
+    $rows = Get-MarkdownTableRows -Lines $lines -SectionHeading 'Spec Delta'
+
+    return @($rows |
+        ForEach-Object { if ($_.Count -gt 2) { $_[2] } } |
+        Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+}
+
 function Test-TraceabilityDocument {
     param(
         [Parameter(Mandatory = $true)]
@@ -125,7 +193,93 @@ function Test-TraceabilityDocument {
     $errors = New-Object System.Collections.Generic.List[string]
     $documentType = 'Unknown'
 
-    if (Test-MarkdownSection -Content $content -SectionHeading 'Requirements') {
+    if (Test-MarkdownSection -Content $content -SectionHeading 'Spec Delta') {
+        $documentType = 'SpecDelta'
+        $rows = Get-MarkdownTableRows -Lines $lines -SectionHeading 'Spec Delta'
+        $deltaIds = @($rows | ForEach-Object { if ($_.Count -gt 0) { $_[0] } })
+        Add-DuplicateIdErrors -Ids $deltaIds -Label 'delta item' -Errors $errors
+
+        $baselineSpecPath = Resolve-BaselineSpecPath -FilePath $FilePath
+        $baselineRequirementIds = if ($baselineSpecPath) { @(Get-RequirementIdsFromSpec -SpecFilePath $baselineSpecPath) } else { $null }
+
+        foreach ($row in $rows) {
+            $deltaId = if ($row.Count -gt 0) { $row[0] } else { '' }
+            $operation = if ($row.Count -gt 1) { $row[1] } else { '' }
+            $requirementId = if ($row.Count -gt 2) { $row[2] } else { '' }
+
+            if ([string]::IsNullOrWhiteSpace($deltaId)) {
+                continue
+            }
+
+            if ($operation -notmatch '^(ADDED|MODIFIED|REMOVED)$') {
+                $errors.Add("Invalid delta operation for ${deltaId}: '$operation'")
+                continue
+            }
+
+            if ([string]::IsNullOrWhiteSpace($requirementId)) {
+                $errors.Add("Missing requirement ID in delta item: $deltaId")
+                continue
+            }
+
+            if ($null -ne $baselineRequirementIds) {
+                $existsInBaseline = $baselineRequirementIds -contains $requirementId
+
+                if ($operation -eq 'ADDED' -and $existsInBaseline) {
+                    $errors.Add("ADDED requirement already exists in baseline: $requirementId")
+                }
+                elseif (($operation -eq 'MODIFIED' -or $operation -eq 'REMOVED') -and -not $existsInBaseline) {
+                    $errors.Add("$operation requirement not found in baseline: $requirementId")
+                }
+            }
+        }
+    }
+    elseif (Test-MarkdownSection -Content $content -SectionHeading 'Impact Map') {
+        $documentType = 'ChangeImpactMap'
+        $rows = Get-MarkdownTableRows -Lines $lines -SectionHeading 'Impact Map'
+        $impactIds = @($rows | ForEach-Object { if ($_.Count -gt 0) { $_[0] } })
+        Add-DuplicateIdErrors -Ids $impactIds -Label 'impact item' -Errors $errors
+
+        $mappedRequirementIds = New-Object System.Collections.Generic.List[string]
+
+        foreach ($row in $rows) {
+            $impactId = if ($row.Count -gt 0) { $row[0] } else { '' }
+            $requirementId = if ($row.Count -gt 1) { $row[1] } else { '' }
+            $operation = if ($row.Count -gt 2) { $row[2] } else { '' }
+            $affectedCsproj = if ($row.Count -gt 3) { $row[3] } else { '' }
+            $reReviewRequired = if ($row.Count -gt 7) { $row[7] } else { '' }
+            $gateRecord = if ($row.Count -gt 8) { $row[8] } else { '' }
+
+            if ([string]::IsNullOrWhiteSpace($impactId)) {
+                continue
+            }
+
+            if (-not [string]::IsNullOrWhiteSpace($requirementId)) {
+                $mappedRequirementIds.Add($requirementId)
+            }
+
+            if (($operation -eq 'ADDED' -or $operation -eq 'MODIFIED') -and [string]::IsNullOrWhiteSpace($affectedCsproj)) {
+                $errors.Add("Affected csproj missing for impact item: $impactId")
+            }
+
+            if ($operation -eq 'REMOVED' -and $reReviewRequired -notmatch '^(Yes|Required)$') {
+                $errors.Add("REMOVED impact item must require re-review: $impactId")
+            }
+
+            if ($reReviewRequired -match '^(Yes|Required)$' -and [string]::IsNullOrWhiteSpace($gateRecord)) {
+                $errors.Add("Re-review required but gate record missing: $impactId")
+            }
+        }
+
+        $deltaRequirementIds = Get-SiblingDeltaRequirementIds -FilePath $FilePath
+        if ($null -ne $deltaRequirementIds) {
+            foreach ($deltaRequirementId in $deltaRequirementIds) {
+                if ($mappedRequirementIds -notcontains $deltaRequirementId) {
+                    $errors.Add("Requirement in spec delta is not mapped in impact map: $deltaRequirementId")
+                }
+            }
+        }
+    }
+    elseif (Test-MarkdownSection -Content $content -SectionHeading 'Requirements') {
         $documentType = 'SubsystemSpec'
         $rows = Get-MarkdownTableRows -Lines $lines -SectionHeading 'Requirements'
         $requirementIds = @($rows | ForEach-Object { if ($_.Count -gt 0) { $_[0] } })

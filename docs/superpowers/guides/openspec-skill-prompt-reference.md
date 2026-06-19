@@ -16,9 +16,11 @@
 | implementation-planner | 承認済み設計から実装プランを作成または更新する | 承認済み Detailed Design、対象 csproj | Implementation Plan、PLN ID、実装順、環境準備 | implementation-plan-authoring, csproj-slicing |
 | test-planner | 承認済み設計からテストプランを作成または更新する | 承認済み Detailed Design、対象 csproj | Test Plan、TST ID、テスト順、テスト準備 | test-plan-authoring, traceability-mapping |
 | plan-reviewer | G2 プランレビューを実施する | 承認済み Detailed Design、Implementation Plan、Test Plan | G2 レビュー記録、指摘分類、承認可否 | plan-gate-review, return-target-classification |
-| implementation-executor | G2 Approved 後に承認済み実装プランを PLN 単位で実行する | 承認済み Detailed Design、Implementation Plan、Test Plan、G2 review record | 実装結果、PLN 実行状況、実装レビュー向けハンドオフ | using-git-worktrees, subagent-driven-development, executing-plans, test-driven-development, requesting-code-review, receiving-code-review, systematic-debugging, verification-before-completion, finishing-a-development-branch |
+| implementation-executor | G2 Approved 後に承認済み実装プランを PLN 単位で実行する。PLN ごとに implementer → spec compliance reviewer → code quality reviewer の 3 段階サブエージェントをオーケストレーションする | 承認済み Detailed Design、Implementation Plan、Test Plan、G2 review record | 実装結果、PLN 実行状況、実装レビュー向けハンドオフ | using-git-worktrees, test-driven-development, requesting-code-review, receiving-code-review, systematic-debugging, verification-before-completion, finishing-a-development-branch |
+| implementation-orchestrator | G2 Approved 後の実装フェーズ全体（executor → reviewer ループ）を調整する | 承認済み Detailed Design、Implementation Plan、Test Plan、G2 review record | ループ回数と指摘サマリ、最終 Implementation Review 結果、test-orchestrator への handoff | implementation-review, implementation-execution-feedback-handling |
 | implementation-reviewer | 実装完了後に実装レビューを実施する | 承認済み Detailed Design、Implementation Plan、Test Plan、G2 review record、実装結果、変更ファイル | Implementation Review 記録、PLN coverage、戻し先判定、次 handoff | implementation-review, implementation-execution-feedback-handling |
-| test-executor | Implementation Review Approved 後に承認済み Test Plan を TST 単位で実行する | 承認済み Detailed Design、Implementation Plan、Test Plan、実装結果、実装レビュー記録 | テスト結果、TST 実行状況、失敗要因判定、テストレビュー向けハンドオフ | using-git-worktrees, subagent-driven-development, executing-plans, test-driven-development, requesting-code-review, receiving-code-review, systematic-debugging, verification-before-completion, finishing-a-development-branch |
+| test-executor | Implementation Review Approved 後に承認済み Test Plan を TST 単位で実行する。TST ごとに test executor → spec compliance reviewer → code quality reviewer の 3 段階サブエージェントをオーケストレーションする | 承認済み Detailed Design、Implementation Plan、Test Plan、実装結果、実装レビュー記録 | テスト結果、TST 実行状況、失敗要因判定、テストレビュー向けハンドオフ | using-git-worktrees, test-driven-development, requesting-code-review, receiving-code-review, systematic-debugging, verification-before-completion, finishing-a-development-branch |
+| test-orchestrator | 実装レビュー承認後のテストフェーズ全体（executor → reviewer ループ）を調整する | 承認済み Test Plan、実装実行結果、実装レビュー記録 | ループ回数と指摘サマリ、最終 Test Review 結果、review-improvement-analyst への handoff | test-review, test-execution-feedback-handling |
 | test-reviewer | テスト実行後にテストレビューを実施する | 承認済み Detailed Design、Implementation Plan、Test Plan、実装レビュー記録、テスト実行結果、失敗分析 | Test Review 記録、TST coverage、戻し先判定、改善分析向け handoff | test-review, test-execution-feedback-handling |
 | review-improvement-analyst | レビュー完了後に再発原因を分析し、workspace skill や custom instructions の改善要否を提案する | 実装レビュー記録、テストレビュー記録、関連成果物、改善候補ファイル | recurring cause summary、更新対象候補、再発防止効果、未解決事項 | review-driven-improvement, defect-classification, return-target-classification |
 
@@ -115,13 +117,26 @@ Step 7 以降に該当する post-G2 実行とレビューの詳細は [OpenSpec
 
 ### 2.7 implementation-executor
 
-- 用途: G2 Approved 後に承認済み実装プランを PLN 単位で実行する
+- 用途: G2 Approved 後に承認済み実装プランを PLN 単位で実行する。PLN ごとに implementer → spec compliance reviewer → code quality reviewer の 3 段階サブエージェントをオーケストレーションし、最後に final code reviewer サブエージェントを派遣する
 - 強制すること:
   - REQ / DSG / PLN / REV の対応維持
-  - 実装結果とレビュー指摘の修正 Plan 化
+  - PLN ごとに実装 → spec compliance review → code quality review の順で進める
   - 実装完了後の implementation-reviewer への handoff
 - 向いている場面:
-  - G2 承認直後の実装開始
+  - 実装フェーズを細粒度に制御したい時
+  - implementation-orchestrator を使わずに executor のみを実行したい時
+
+### 2.7.1 implementation-orchestrator
+
+- 用途: G2 Approved 後の実装フェーズ全体（Step 7–8）を自動調整する
+- 強制すること:
+  - implementation-executor と implementation-reviewer を内部でサブエージェントとして順次呼び出す
+  - コードレベルの差戻しはループで再実行し（最大 3 回）、Design / Plan 差戻しはハンドオフで停止する
+  - PLN / REQ / DSG / REV のトレーサビリティを全サブエージェント間で保持する
+  - 実装・レビューの判断は自ら行わず executor / reviewer サブエージェントに委ねる
+- 向いている場面:
+  - G2 承認後に実装フェーズ全体を自動化したい時
+  - 手動で executor と reviewer を切り替えずに済む単一エントリーポイントが欲しい時
 
 ### 2.8 implementation-reviewer
 
@@ -135,13 +150,27 @@ Step 7 以降に該当する post-G2 実行とレビューの詳細は [OpenSpec
 
 ### 2.9 test-executor
 
-- 用途: Implementation Review Approved 後に承認済み Test Plan を TST 単位で実行する
+- 用途: Implementation Review Approved 後に承認済み Test Plan を TST 単位で実行する。TST ごとに test executor → spec compliance reviewer → code quality reviewer の 3 段階サブエージェントをオーケストレーションし、最後に final test reviewer サブエージェントを派遣する
 - 強制すること:
   - REQ / DSG / TST / REV の対応維持
-  - 失敗要因の判定と戻し先の明示
+  - TST ごとに実行 → spec compliance review → code quality review の順で進める
+  - 失敗時は systematic-debugging サブエージェントを先に派遣する
   - test-reviewer への handoff
 - 向いている場面:
-  - 実装レビュー承認後のテスト実行
+  - テストフェーズを細粒度に制御したい時
+  - test-orchestrator を使わずに executor のみを実行したい時
+
+### 2.9.1 test-orchestrator
+
+- 用途: 実装レビュー承認後のテストフェーズ全体（Step 9–10）を自動調整する
+- 強制すること:
+  - test-executor と test-reviewer を内部でサブエージェントとして順次呼び出す
+  - テスト / コードレベルの差戻しはループで再実行し（最大 3 回）、Test Plan / Impl Plan / Design 差戻しはハンドオフで停止する
+  - TST / REQ / DSG / REV のトレーサビリティを全サブエージェント間で保持する
+  - テスト・レビューの判断は自ら行わず executor / reviewer サブエージェントに委ねる
+- 向いている場面:
+  - Implementation Review 承認後にテストフェーズ全体を自動化したい時
+  - 手動で test-executor と test-reviewer を切り替えずに済む単一エントリーポイントが欲しい時
 
 ### 2.10 test-reviewer
 
@@ -186,6 +215,9 @@ Step 7 以降に該当する post-G2 実行とレビューの詳細は [OpenSpec
 | test-review | テストレビュー観点を適用 | G2 後のテストレビュー時 | TST coverage、期待結果整合、失敗分析、REQ / DSG / TST / REV |
 | test-execution-feedback-handling | テストレビュー指摘の戻し先を判定 | G2 後のテスト実行・再レビュー時 | REQ / DSG / TST / REV の対応、Design / Plan / Test / Code / Minor Fix |
 | review-driven-improvement | レビュー結果から再発防止の改善対象を判断 | 実装レビューやテストレビュー完了後の改善分析 | Review ID 根拠、原因分類、更新対象、再発防止効果 |
+| delta-operation-classification | 要件変更を spec delta として ADDED / MODIFIED / REMOVED に分類 | 変更起案時の spec-delta.md 作成 | baseline との要件 ID 照合、操作種別の妥当性、ID 安定化規約との 1:1 対応 |
+| change-impact-mapping | spec delta が影響する csproj 成果物を特定し再レビュー要否を決める | 変更起案時の impact-map.md 作成 | 全 delta 要件の対応付け、影響 DSG / PLN / TST 参照、再レビュー判定 |
+| change-archiving | 全ゲート承認後に spec delta を baseline へ畳み込み change を退避 | 変更ライフサイクルの G3 アーカイブ時 | proposal 承認状態、検証通過、baseline 反映、archive 退避 |
 
 ### 3.0 dig
 
@@ -313,6 +345,30 @@ Step 7 以降に該当する post-G2 実行とレビューの詳細は [OpenSpec
   - Review ID と関連 ID を保った指摘の正規化
   - 頻度と重大度に基づく根本原因の分類
   - skill、custom instructions、成果物修正のみのどれで扱うべきかの切り分け
+
+### 3.17 delta-operation-classification
+
+- 役割: 既存 baseline に対する要件変更を spec delta として ADDED / MODIFIED / REMOVED に分類する
+- 主な効果:
+  - 要件 ID 安定化規約への 1:1 写像（ADDED=新規採番 / MODIFIED=ID 維持で内容変更 / REMOVED=Status 廃止）
+  - baseline 仕様を直接編集せず差分のみで変更を表現
+  - spec-delta.md の Operation 列の妥当性確認
+
+### 3.18 change-impact-mapping
+
+- 役割: spec delta が影響する csproj 単位の設計・プラン・テスト成果物を特定し、再レビュー要否を決める
+- 主な効果:
+  - 全 delta 要件の影響先 ID への対応付け
+  - 設計内容を複製せず ID 参照のみで影響範囲を表現
+  - 影響成果物の再レビュー判定（impact-map.md）
+
+### 3.19 change-archiving
+
+- 役割: 全ゲート承認後に spec delta を baseline 仕様へ畳み込み、change フォルダを archive へ退避する
+- 主な効果:
+  - baseline（openspec/specs/subsystem-spec.md）はアーカイブ操作でのみ更新
+  - 変更履歴の不変記録化
+  - scripts/openspec-archive.ps1 による明示実行（hook では実行しない）
 
 ## 4. 推奨する見方
 

@@ -26,18 +26,15 @@ flowchart TD
     F -->|承認| G[実装・テスト開始]
     F -->|プラン修正| E
     F -->|設計修正| C
-    G --> H[7. implementation-executor prompt]
-    H --> I[8. implementation-reviewer prompt]
-    I -->|承認| J[9. test-executor prompt]
-    I -->|Code差戻し| H
-    I -->|Plan差戻し| E
-    I -->|Design差戻し| C
-    J --> K[10. test-reviewer prompt]
-    K -->|承認| L[11. review-improvement-analyst]
-    K -->|Test差戻し| J
-    K -->|Code差戻し| H
-    K -->|Plan差戻し| E
-    K -->|Design差戻し| C
+    G --> Io["7–8. implementation-orchestrator"]
+    Io -->|承認| To["9–10. test-orchestrator"]
+    Io -->|Plan差戻し| E
+    Io -->|Design差戻し| C
+    To -->|承認| L[11. review-improvement-analyst]
+    To -->|Code差戻し| Io
+    To -->|Test Plan差戻し| M
+    To -->|Impl Plan差戻し| E
+    To -->|Design差戻し| C
 ```
 
 ## 3. 呼び出し順
@@ -194,11 +191,53 @@ flowchart TD
 | 設計構造の問題 | Detailed Design | detailed-design-author | detailed-design-authoring, traceability-mapping |
 | 実装プランだけの問題 | Implementation Plan | implementation-planner | implementation-plan-authoring, csproj-slicing |
 | テストプランだけの問題 | Test Plan | test-planner | test-plan-authoring, traceability-mapping |
-| 実装結果の問題 | Implementation / Code | implementation-executor | implementation-review, implementation-execution-feedback-handling |
-| テスト結果の問題 | Test / Code / Plan | test-executor または test-planner | test-review, test-execution-feedback-handling |
+| 実装結果の問題 | Implementation / Code | implementation-orchestrator または implementation-executor | implementation-review, implementation-execution-feedback-handling |
+| テスト結果の問題 | Test / Code / Plan | test-orchestrator または test-executor または test-planner | test-review, test-execution-feedback-handling |
 | 戻し先の判断に迷う | レビュー判定補助 | design-reviewer、plan-reviewer、implementation-reviewer、test-reviewer | defect-classification, return-target-classification |
 
-## 6. 最短実行順
+## 6. 変更ライフサイクル（既存 baseline に対する仕様変更）
+
+既存の baseline 仕様（`openspec/specs/subsystem-spec.md`）に対する変更は、baseline を直接書き換えず、`openspec/changes/<change-id>/` の薄い封筒として起案する。封筒には change-proposal、spec-delta、impact-map と reviews を置き、ゲート通過後に archive 操作で baseline へ畳み込む。
+
+### 6.1 変更の流れ
+
+```mermaid
+flowchart TD
+    A[変更要求] --> B[change-proposal 作成]
+    B --> C[spec-delta 作成<br/>delta-operation-classification]
+    C --> D[impact-map 作成<br/>change-impact-mapping]
+    D --> E[影響 csproj の Design / Plan / Test 更新と再レビュー<br/>Step 2–6 を影響範囲のみ再実行]
+    E --> F[実装・テスト<br/>Step 7–11]
+    F --> G[G3 アーカイブゲート]
+    G -->|承認| H[change-archiving<br/>openspec-archive.ps1 実行]
+    H --> I[baseline 更新 + change を archive へ退避]
+```
+
+### 6.2 変更起案で使う skill
+
+| 成果物 | テンプレート | 使う skill | 主な確認点 |
+| --- | --- | --- | --- |
+| change-proposal | templates/change-proposal.md | （なし。提案の Why / Scope / 影響 csproj / ゲート状況を整理） | Change ID、Status、影響 csproj、承認 |
+| spec-delta | templates/spec-delta.md | delta-operation-classification | Operation が ADDED / MODIFIED / REMOVED、baseline との ID 整合 |
+| impact-map | templates/impact-map.md | change-impact-mapping | 全 delta 要件の対応、ID 参照のみ、再レビュー要否 |
+
+### 6.3 影響範囲の再レビュー
+
+- spec-delta と impact-map が確定したら、impact-map が指す csproj 成果物について Step 2〜6 を影響範囲のみ再実行する。
+- ADDED / MODIFIED は対応する設計・プラン・テストを更新し、G1 / G2 を再通過させる。
+- REMOVED は下流参照の除去を確認し、再レビュー対象として記録する。
+- 影響しない csproj 成果物は据え置く。封筒は設計内容を複製せず、ID 参照のみを持つ。
+
+### 6.4 G3 アーカイブゲート
+
+- 全ゲート（G1 / G2 / 実装レビュー / テストレビュー）の承認後に実施する。
+- change-archiving skill に従い、`scripts/openspec-archive.ps1 <change-id>` を明示実行する。
+- スクリプトは proposal が Approved かつ spec-delta / impact-map が検証通過であることを確認し、baseline へ delta を畳み込み、`## Change History` を追記し、change フォルダを `openspec/changes/archive/<yyyymmdd>-<change-id>/` へ退避する。
+- baseline はこのアーカイブ操作でのみ更新する。退避後の change フォルダは不変記録として編集しない。
+- 詳細は [workflow-approval-gate-definition.md](../../../workflow-approval-gate-definition.md) の §14 / §15 を参照する。
+
+## 7. 最短実行順
+
 
 1. subsystem-spec-author
 2. detailed-design-author

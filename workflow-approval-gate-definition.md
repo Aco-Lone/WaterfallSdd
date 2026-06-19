@@ -105,6 +105,9 @@
 - hook は Implementation Plan の Traceability Matrix で要件 ID または設計要素 ID が空の plan item を失敗とする
 - hook は Test Plan の Traceability Matrix で要件 ID または設計要素 ID が空の test item を失敗とする
 - hook は実装プランとテストプランを同一ファイルへ混在させた combined plan を失敗とする
+- hook は Spec Delta の Operation が ADDED / MODIFIED / REMOVED 以外の値を失敗とする
+- hook は ADDED の要件 ID が baseline に既存、または MODIFIED / REMOVED の要件 ID が baseline に不在の場合を失敗とする
+- hook は Impact Map に spec delta の未マップ要件 ID、ADDED / MODIFIED 行の影響 csproj 欠落、再レビュー必要なのに Gate Record が空の行を失敗とする
 
 ## 6. 指摘の分類基準
 
@@ -280,3 +283,55 @@ flowchart TD
 ## 13. 本定義の採用方針
 
 本ワークフローでは、OpenSpec を仕様の唯一の正本とし、詳細設計書と実装プランおよびテストプランをレビューゲートによって厳密に接続する。これにより、Superpowers の TDD 的な進め方を採らずとも、skill ベースの考え方だけを工程管理へ取り込み、Waterfall 寄りの運用を維持できる。
+
+## 14. 変更ライフサイクルとアーカイブ
+
+### 14.1 baseline と change の分離
+
+- baseline の要件仕様は openspec/specs/subsystem-spec.md を正本とする。
+- 進行中の変更は openspec/changes/<change-id>/ で扱う。
+- csproj 単位の詳細設計・実装プラン・テストプランは現行の配置のまま baseline として維持し、change フォルダへ複製しない。
+
+### 14.2 change の構成
+
+- proposal.md は変更の動機、スコープ、影響 csproj、ゲート状況を記録する。
+- spec-delta.md は baseline への差分を ADDED / MODIFIED / REMOVED で記録する唯一の要件変更源である。
+- impact-map.md は spec delta が影響する csproj と DSG / PLN / TST の ID を参照として持ち、設計・プラン・テスト本文を複製しない。
+
+### 14.3 変更の進行
+
+1. change を起票し、spec-delta.md と impact-map.md を作成する。
+2. 影響 csproj の baseline 詳細設計・プラン・テストを直接編集し、impact-map.md で再レビュー対象を管理する。
+3. change スコープで G1 / G2 / 実装レビュー / テストレビューを実施する。
+4. 全ゲート通過後に G3 アーカイブを実施する。
+
+### 14.4 baseline 更新の原則
+
+- baseline の要件仕様は G3 アーカイブ操作でのみ更新する。変更中に baseline を直接編集しない。
+- 手書きの Change History 表は使用せず、archive 操作が自動で記録する。
+
+## 15. G3 アーカイブゲート
+
+### 入力
+
+- 承認済みの change 一式（proposal.md, spec-delta.md, impact-map.md, reviews）
+- baseline の openspec/specs/subsystem-spec.md
+
+### 確認項目
+
+- proposal.md の Status が Approved であるか
+- 必要なゲート記録が承認済みか
+- spec-delta.md と impact-map.md がトレーサビリティ検証をパスしているか
+
+### 承認条件
+
+- 上記確認項目をすべて満たすこと
+
+### 処理
+
+- scripts/openspec-archive.ps1 を change ID 指定で明示実行する。hook では実行しない。
+- spec-delta を baseline へ反映し（ADDED 追記 / MODIFIED 更新 / REMOVED は Status を Obsolete）、change フォルダを openspec/changes/archive/<yyyymmdd>-<change-id>/ へ移動する。
+
+### 差戻し条件
+
+- 確認項目のいずれかが未充足であること。この場合 archive は拒否される。

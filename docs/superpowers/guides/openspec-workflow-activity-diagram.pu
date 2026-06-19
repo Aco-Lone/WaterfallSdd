@@ -68,45 +68,63 @@ repeat while (G2 が承認されていない?) is (はい)
 |生成AI|
 :実装を開始;
 
-repeat
+:implementation-orchestratorを起動;
     repeat
-        :実装Taskごとにサブエージェントに実装を委譲;
-        :実装Taskごとにサブエージェントにセルフレビューを委譲;
+        :implementation-executorをサブエージェントとして派遣;
+        note right
+            PLNごとに
+            implementer → spec reviewer
+            → code quality reviewer
+            の3段階で実行
+        end note
+        :implementation-reviewerをサブエージェントとして派遣;
 
         |実装者|
-        :実装レビューを実施;
-        :レビュー結果をインプット;
+        :Implementation Review結果を確認;
+        :Plan/Design差戻し指示をインプット(差戻し時);
 
         |生成AI|
-        :レビュー結果を受領;
-        :修正Planを作成;
-    repeat while(修正が必要?) is (はい)
+        :Review結果を受領;
+        :Code差戻し→再ループ / Plan/Design差戻し→ハンドオフ;
+    repeat while(Code差戻しが必要?) is (はい)
 
-    |生成AI|
-    :テストを開始;
-        
+    :test-orchestratorを起動;
     repeat
-        :テストTaskごとにサブエージェントにテストを委譲;
-        :テストTaskごとにサブエージェントでテストを実行;
-
-        if (テストOK?) then (はい)
-            :実装完了;
-        else (いいえ)
-            :修正Planを作成;
-        endif
+        :test-executorをサブエージェントとして派遣;
+        note right
+            TSTごとに
+            test executor → spec reviewer
+            → code quality reviewer
+            の3段階で実行
+        end note
+        :test-reviewerをサブエージェントとして派遣;
 
         |実装者|
-        :テストレビューを実施;
-        :レビュー結果をインプット;
-    repeat while(修正が必要?) is (はい)
+        :Test Review結果を確認;
+        :Plan/Design差戻し指示をインプット(差戻し時);
+
+        |生成AI|
+        :Review結果を受領;
+        :Test/Code差戻し→再ループ / Plan/Design差戻し→ハンドオフ;
+    repeat while(Test/Code差戻しが必要?) is (はい)
 
     |レビュアー|
-    :実装・テストレビュー;
-repeat while(修正が必要?) is (はい)
+    :改善分析（review-improvement-analyst）;
 
 |生成AI|
 :実装・テストレビュー結果を分析;
 :不足しているルールをAGENTS.md、skillに反映;
+
+|実装者|
+if (既存 baseline への変更か?) then (はい)
+    :G3 アーカイブを依頼;
+    |生成AI|
+    :openspec-archive.ps1 を change ID 指定で実行;
+    :spec-delta を baseline へ畳み込み（ADDED/MODIFIED/REMOVED）;
+    :baseline の Change History へ追記;
+    :change フォルダを openspec/changes/archive/ へ退避;
+else (いいえ・新規構築)
+endif
 
 stop
 

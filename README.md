@@ -31,12 +31,16 @@ install 時の postinstall で、実行したワークスペース直下へ次�
 - `scripts/openspec-bootstrap-hook.ps1`
 - `scripts/traceability-hook.ps1`
 - `scripts/traceability-validator.ps1`
+- `scripts/openspec-archive.ps1`
 - `templates/detailed-design.md`
 - `templates/implementation-plan.md`
 - `templates/review-record.md`
 - `templates/skill.md`
 - `templates/subsystem-spec.md`
 - `templates/test-plan.md`
+- `templates/change-proposal.md`
+- `templates/spec-delta.md`
+- `templates/impact-map.md`
 - `README.md`
 - `spec-driven-development-options.md`
 - `workflow-approval-gate-definition.md`
@@ -70,3 +74,19 @@ Install-Module Pester -Scope CurrentUser
 ## 補足
 
 このプラグインでは、実装そのものよりも「何を、どの順序で、どの成果物に残すか」を揃えることを重視しています。まずは承認ゲートの流れとトレーサビリティの考え方を把握してから、各成果物を作成してください。
+
+## 変更管理（OpenSpec change と archive）
+
+継続的な仕様変更は baseline と change を分離して扱います。
+
+- `openspec/specs/subsystem-spec.md` は承認済み要件の baseline（正本）です。
+- 進行中の変更は `openspec/changes/<change-id>/` で扱い、`proposal.md` / `spec-delta.md` / `impact-map.md` / `reviews/` を置きます。
+- `spec-delta.md` は baseline への差分を ADDED / MODIFIED / REMOVED で記録します。baseline は変更中に直接編集しません。
+- `impact-map.md` は影響する csproj と DSG / PLN / TST の ID を参照として持ち、設計・プラン・テスト本文は複製しません。
+- 全ゲート通過後に archive を明示実行し、spec delta を baseline へ反映して change を退避します。
+
+```powershell
+pwsh -File scripts/openspec-archive.ps1 <change-id>
+```
+
+archive は前提条件（proposal が Approved、spec-delta と impact-map が検証パス）を満たさない限り拒否します。詳細は [workflow-approval-gate-definition.md](workflow-approval-gate-definition.md) の G3 アーカイブゲートを参照してください。

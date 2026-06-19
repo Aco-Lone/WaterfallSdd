@@ -17,8 +17,13 @@ Use the nearest match instead of loading every skill:
 - Test review or failure feedback handling: test-execution-feedback-handling
 - Return-target decisions: return-target-classification or defect-classification
 - Reusable review-driven process improvements: review-driven-improvement
+- Spec delta operation (ADDED/MODIFIED/REMOVED): delta-operation-classification
+- Change impact mapping to csproj artifacts: change-impact-mapping
+- Applying a change to baseline and archiving: change-archiving
 
 Do not inject full skill contents by default. Read only the skill required for the current task.
+
+Baseline requirements live in openspec/specs/subsystem-spec.md and are updated only by the archive operation. In-flight changes live in openspec/changes/<change-id>/.
 
 Shared operating rules live in README.md and workflow-approval-gate-definition.md.
 </EXTREMELY_IMPORTANT>

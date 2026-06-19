@@ -19,6 +19,7 @@ user-invocable: false
 3. 要件の意味が変わらない限り既存の要件 ID を維持する。
 4. 新規要件だけに新しい要件 ID を採番する。
 5. スコープ外と未決事項を分けて記録する。
+6. 既存 baseline への変更は baseline 本文を直接書き換えず、spec delta として ADDED / MODIFIED / REMOVED で表す。
 
 ## Checks
 
@@ -26,8 +27,11 @@ user-invocable: false
 - 1 つの要件が複数の独立した振る舞いを抱えていない。
 - 廃止要件は削除せず状態で表現する。
 - 仕様本文より先にクラス設計へ踏み込まない。
+- baseline の openspec/specs/subsystem-spec.md は archive 操作だけが更新する。
 
 ## References
 
 - [Subsystem spec template](../../../templates/subsystem-spec.md)
+- [Spec delta template](../../../templates/spec-delta.md)
+- [Delta operation classification skill](../delta-operation-classification/SKILL.md)
 - [Workflow and gate definition](../../../workflow-approval-gate-definition.md)

@@ -29,13 +29,20 @@ Execute an approved implementation plan PLN by PLN while preserving requirement,
 - DO NOT improvise execution workflow when a Superpowers skill covers it.
 - DO NOT lose PLN, REQ, DSG, or REV identifiers when splitting or sequencing work.
 - DO NOT close review issues by guessing; use implementation-execution-feedback-handling to decide whether the return target is Design, Plan, Code, or Minor Fix.
+- DO NOT dispatch multiple implementer subagents in parallel; execute PLN items sequentially to avoid merge conflicts and maintain traceable commits.
+- DO NOT proceed to spec compliance review if the implementer subagent reports BLOCKED; resolve the blocker first per implementation-execution-feedback-handling.
 
 ## Approach
 1. Read the approved Detailed Design, Implementation Plan, Test Plan, G2 review record, and [workflow approval gate definition](../../workflow-approval-gate-definition.md) before starting execution.
 2. Create or select an isolated worktree with Superpowers using-git-worktrees so the implementation does not run directly on main or master.
-3. Execute work PLN by PLN, preserving every Plan Item ID and its linked Requirement IDs and Design Element IDs.
-4. Prefer Superpowers subagent-driven-development for loosely coupled work, and switch to executing-plans when the work is tightly coupled or sequence-sensitive.
-5. Delegate test-first behavior, code review requests, and completion verification to Superpowers test-driven-development, requesting-code-review, and verification-before-completion.
+3. Extract all PLN items from the Implementation Plan with their REQ / DSG traceability IDs and create a TodoWrite entry for each item before beginning any execution.
+4. For each PLN item in TodoWrite, follow this orchestration loop:
+   1. Dispatch an **implementer subagent** with the full PLN item text, linked REQ / DSG context, and the relevant Detailed Design section. The subagent implements, runs tests, commits, and self-reviews.
+   2. Dispatch a **spec compliance reviewer subagent** to verify the committed code against the DSG elements and PLN intent for this item.
+   3. Dispatch a **code quality reviewer subagent** for the same commit scope.
+   4. Re-dispatch the implementer to fix any gaps flagged by either reviewer, then re-review until both reviewers approve.
+   5. Mark the PLN item complete in TodoWrite and record the commit reference alongside its PLN / REQ / DSG IDs.
+5. After all PLN items are complete, dispatch a **final code reviewer subagent** across the entire implementation scope to validate end-to-end coherence before handing off to implementation-reviewer.
 6. When implementation review feedback or execution failures appear, apply implementation-execution-feedback-handling to classify the return target and decide whether the issue belongs to Design, Plan, Code, or Minor Fix.
 7. Prepare a completion handoff for `implementation-reviewer` with completed PLN items, changed files, verification evidence, open blockers, and traceability notes.
 8. Keep execution notes focused on concrete progress, blockers, and traceability outcomes rather than restating the whole plan.
