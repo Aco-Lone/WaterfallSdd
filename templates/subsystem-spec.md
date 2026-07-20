@@ -46,6 +46,15 @@
 | --- | --- | --- |
 | REQ-001 |  |  |
 
+## Related Knowledge
+
+- Reference knowledge sources of truth by ID only. Do not copy glossary or business rule bodies here.
+- Resolve source paths through `openspec/knowledge/index.md`.
+
+| Requirement ID | Related Knowledge IDs | Notes |
+| --- | --- | --- |
+| REQ-001 | AUTH-TERM-001, AUTH-RULE-001 |  |
+
 ## Non-Functional Considerations
 
 | Requirement ID | Category | Target | Measurement |

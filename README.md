@@ -27,11 +27,13 @@ install 時の postinstall で、実行したワークスペース直下へ次�
 - `.github/hooks`
 - `.github/prompts`
 - `.github/skills`
-- `docs/superpowers/guides`
+- `docs/guides`
 - `scripts/openspec-bootstrap-hook.ps1`
 - `scripts/traceability-hook.ps1`
 - `scripts/traceability-validator.ps1`
 - `scripts/openspec-archive.ps1`
+- `scripts/knowledge-index.ps1`
+- `scripts/knowledge-context-manifest.ps1`
 - `templates/detailed-design.md`
 - `templates/implementation-plan.md`
 - `templates/review-record.md`
@@ -41,6 +43,11 @@ install 時の postinstall で、実行したワークスペース直下へ次�
 - `templates/change-proposal.md`
 - `templates/spec-delta.md`
 - `templates/impact-map.md`
+- `templates/glossary-term.md`
+- `templates/business-rule.md`
+- `templates/adr.md`
+- `templates/knowledge-delta.md`
+- `templates/knowledge-index.md`
 - `README.md`
 - `spec-driven-development-options.md`
 - `workflow-approval-gate-definition.md`
@@ -59,7 +66,7 @@ Install-Module Pester -Scope CurrentUser
 
 1. まず [workflow-approval-gate-definition.md](workflow-approval-gate-definition.md) と [spec-driven-development-options.md](spec-driven-development-options.md) を読み、運用ルールを確認します。
 2. [templates/](templates/) から必要な雛形を選び、対象の仕様に合わせて複製します。
-3. 仕様文書は [docs/superpowers/specs/](docs/superpowers/specs/) に、補助ガイドは [docs/superpowers/guides/](docs/superpowers/guides/) に配置します。
+3. 仕様文書は [docs/designs/](docs/designs/) に、補助ガイドは [docs/guides/](docs/guides/) に配置します。
 4. 詳細設計書、実装プラン、テストプランを作成するときは、要件 ID と設計要素 ID の対応を明記します。
 5. 仕上げに [scripts/traceability-validator.ps1](scripts/traceability-validator.ps1) で Markdown のトレーサビリティを確認し、必要に応じて [tests/TraceabilityValidator.Tests.ps1](tests/TraceabilityValidator.Tests.ps1) で検証ロジックを確認します。
 
@@ -90,3 +97,22 @@ pwsh -File scripts/openspec-archive.ps1 <change-id>
 ```
 
 archive は前提条件（proposal が Approved、spec-delta と impact-map が検証パス）を満たさない限り拒否します。詳細は [workflow-approval-gate-definition.md](workflow-approval-gate-definition.md) の G3 アーカイブゲートを参照してください。
+
+## ナレッジ管理（用語・業務ルール・設計判断）
+
+ドメイン知識と設計判断は種類別の正本を ID 参照で成果物へ接続します。詳細は [workflow-approval-gate-definition.md](workflow-approval-gate-definition.md) の第16章と [.github/skills/knowledge-context-resolution/SKILL.md](.github/skills/knowledge-context-resolution/SKILL.md) を参照してください。
+
+- 用語は `openspec/knowledge/glossary/<TERM>.md`、業務ルールは `openspec/knowledge/business-rules/<RULE>.md` に項目単位で正本を置きます。
+- 重要な設計判断は `openspec/decisions/ADR-####-<slug>.md`（リポジトリ全体で連番）に置きます。Accepted ADR は不変記録として扱い、新しい ADR から `Superseded By` で置換します。
+- `openspec/knowledge/index.md` は正本から生成します。手書きせず、変更後に再生成します。
+- 進行中の用語・ルール変更は `openspec/changes/<change-id>/knowledge-delta.md` に ADDED / MODIFIED / REMOVED で記録します。baseline は G3 アーカイブでのみ更新します。
+- Subsystem Spec の Related Knowledge と Detailed Design の Related Knowledge / Decision Record IDs で知識を ID 参照します。本文は複製しません。
+
+雛形は [templates/glossary-term.md](templates/glossary-term.md)、[templates/business-rule.md](templates/business-rule.md)、[templates/adr.md](templates/adr.md)、[templates/knowledge-delta.md](templates/knowledge-delta.md)、[templates/knowledge-index.md](templates/knowledge-index.md) を使用します。
+
+```powershell
+pwsh -File scripts/knowledge-index.ps1
+pwsh -File scripts/knowledge-context-manifest.ps1 <change-id> <phase> <KnowledgeId> [<KnowledgeId> ...]
+```
+
+AI は明示 ID 参照を正規の取得経路とし、全文検索は候補発見に限定します。ゲートやレビュー時には Context Manifest を生成し、承認時から判断根拠が変化していないか確認します。archive は spec delta に加えて knowledge delta を baseline へ反映し、Accepted ADR を移送し、Knowledge Index を再生成します。

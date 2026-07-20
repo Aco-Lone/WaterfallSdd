@@ -27,4 +27,4 @@ user-invocable: false
 ## References
 
 - [Workflow and gate definition](../../../workflow-approval-gate-definition.md)
-- [OpenSpec modification design](../../../docs/superpowers/specs/2026-06-07-openspec-modification-design.md)
+- [OpenSpec modification design](../../../docs/designs/2026-06-07-openspec-modification-design.md)

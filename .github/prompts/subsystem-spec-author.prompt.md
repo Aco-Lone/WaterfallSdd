@@ -30,3 +30,8 @@ Checklist:
 - Record every requirement with a unique requirement ID.
 - Ensure acceptance criteria exist for each requirement.
 - Highlight missing decisions instead of guessing.
+
+## Knowledge Handling
+- Resolve required TERM / RULE IDs through openspec/knowledge/index.md before drafting requirements, following .github/skills/knowledge-context-resolution/SKILL.md.
+- Reference knowledge by ID in the Related Knowledge section. Do not copy glossary or business rule bodies into the spec.
+- If a needed term or business rule is missing, record it as an unresolved item and capture term/rule changes in the change knowledge-delta.md. Do not invent it as settled.

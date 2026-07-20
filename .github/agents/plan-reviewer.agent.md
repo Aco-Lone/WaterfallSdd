@@ -39,7 +39,7 @@ You are the G2 plan review gate reviewer for the OpenSpec Waterfall workflow.
 
 ## Report File
 - If the user provides a report path, write the review report there.
-- Otherwise create `docs/superpowers/specs/YYYY-MM-DD-g2-plan-review-report.md`.
+- Otherwise create `docs/designs/YYYY-MM-DD-g2-plan-review-report.md`.
 - The Markdown file is the authoritative review output; do not leave the review result only in chat.
 - In chat, return the report file path and a concise decision summary.
 
@@ -49,3 +49,7 @@ You are the G2 plan review gate reviewer for the OpenSpec Waterfall workflow.
 - Untraced requirement ID count across both plans
 - Untraced design element ID count across both plans
 - Findings table aligned to [the review record template](../../templates/review-record.md)
+
+## Knowledge Checks
+- Verify the plan preserves the approved knowledge references and introduces no new business rule or design decision.
+- Flag any knowledge or ADR issue closed inside the plan and return it to design instead.

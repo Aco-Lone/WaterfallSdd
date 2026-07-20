@@ -182,6 +182,87 @@ function Get-SiblingDeltaRequirementIds {
         Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
 }
 
+function Get-ControlFieldValue {
+    param(
+        [Parameter(Mandatory = $true)]
+        $Lines,
+
+        [Parameter(Mandatory = $true)]
+        [string]$SectionHeading,
+
+        [Parameter(Mandatory = $true)]
+        [string]$FieldName
+    )
+
+    $rows = Get-MarkdownTableRows -Lines $Lines -SectionHeading $SectionHeading
+    foreach ($row in $rows) {
+        if ($row.Count -ge 2 -and $row[0] -eq $FieldName) {
+            return $row[1]
+        }
+    }
+
+    return ''
+}
+
+function Resolve-BaselineKnowledgeDir {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath
+    )
+
+    $resolved = Resolve-Path -Path $FilePath -ErrorAction SilentlyContinue
+    $directory = if ($resolved) { Split-Path -Parent $resolved.Path } else { Split-Path -Parent $FilePath }
+
+    while (-not [string]::IsNullOrEmpty($directory)) {
+        $candidate = Join-Path $directory 'openspec/knowledge'
+        if (Test-Path $candidate) {
+            return $candidate
+        }
+
+        $parent = Split-Path -Parent $directory
+        if ($parent -eq $directory) {
+            break
+        }
+
+        $directory = $parent
+    }
+
+    return $null
+}
+
+function Get-BaselineKnowledgeIds {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$KnowledgeDir
+    )
+
+    $ids = New-Object System.Collections.Generic.List[string]
+
+    $glossaryDir = Join-Path $KnowledgeDir 'glossary'
+    if (Test-Path $glossaryDir) {
+        foreach ($file in Get-ChildItem -Path $glossaryDir -Filter '*.md' -File) {
+            $lines = (Get-Content -Path $file.FullName -Raw -Encoding UTF8) -split "`r?`n"
+            $termId = Get-ControlFieldValue -Lines $lines -SectionHeading 'Glossary Term' -FieldName 'Term ID'
+            if (-not [string]::IsNullOrWhiteSpace($termId)) {
+                $ids.Add($termId)
+            }
+        }
+    }
+
+    $ruleDir = Join-Path $KnowledgeDir 'business-rules'
+    if (Test-Path $ruleDir) {
+        foreach ($file in Get-ChildItem -Path $ruleDir -Filter '*.md' -File) {
+            $lines = (Get-Content -Path $file.FullName -Raw -Encoding UTF8) -split "`r?`n"
+            $ruleId = Get-ControlFieldValue -Lines $lines -SectionHeading 'Business Rule' -FieldName 'Rule ID'
+            if (-not [string]::IsNullOrWhiteSpace($ruleId)) {
+                $ids.Add($ruleId)
+            }
+        }
+    }
+
+    return $ids.ToArray()
+}
+
 function Test-TraceabilityDocument {
     param(
         [Parameter(Mandatory = $true)]
@@ -284,6 +365,79 @@ function Test-TraceabilityDocument {
         $rows = Get-MarkdownTableRows -Lines $lines -SectionHeading 'Requirements'
         $requirementIds = @($rows | ForEach-Object { if ($_.Count -gt 0) { $_[0] } })
         Add-DuplicateIdErrors -Ids $requirementIds -Label 'requirement' -Errors $errors
+    }
+    elseif (Test-MarkdownSection -Content $content -SectionHeading 'Knowledge Delta') {
+        $documentType = 'KnowledgeDelta'
+        $rows = Get-MarkdownTableRows -Lines $lines -SectionHeading 'Knowledge Delta'
+        $deltaIds = @($rows | ForEach-Object { if ($_.Count -gt 0) { $_[0] } })
+        Add-DuplicateIdErrors -Ids $deltaIds -Label 'knowledge delta item' -Errors $errors
+
+        $baselineKnowledgeDir = Resolve-BaselineKnowledgeDir -FilePath $FilePath
+        $baselineKnowledgeIds = if ($baselineKnowledgeDir) { @(Get-BaselineKnowledgeIds -KnowledgeDir $baselineKnowledgeDir) } else { $null }
+
+        foreach ($row in $rows) {
+            $deltaId = if ($row.Count -gt 0) { $row[0] } else { '' }
+            $operation = if ($row.Count -gt 1) { $row[1] } else { '' }
+            $knowledgeId = if ($row.Count -gt 2) { $row[2] } else { '' }
+
+            if ([string]::IsNullOrWhiteSpace($deltaId)) {
+                continue
+            }
+
+            if ($operation -notmatch '^(ADDED|MODIFIED|REMOVED)$') {
+                $errors.Add("Invalid knowledge delta operation for ${deltaId}: '$operation'")
+                continue
+            }
+
+            if ([string]::IsNullOrWhiteSpace($knowledgeId)) {
+                $errors.Add("Missing knowledge ID in delta item: $deltaId")
+                continue
+            }
+
+            if ($null -ne $baselineKnowledgeIds) {
+                $existsInBaseline = $baselineKnowledgeIds -contains $knowledgeId
+
+                if ($operation -eq 'ADDED' -and $existsInBaseline) {
+                    $errors.Add("ADDED knowledge already exists in baseline: $knowledgeId")
+                }
+                elseif (($operation -eq 'MODIFIED' -or $operation -eq 'REMOVED') -and -not $existsInBaseline) {
+                    $errors.Add("$operation knowledge not found in baseline: $knowledgeId")
+                }
+            }
+        }
+    }
+    elseif (Test-MarkdownSection -Content $content -SectionHeading 'Knowledge Index') {
+        $documentType = 'KnowledgeIndex'
+        $rows = Get-MarkdownTableRows -Lines $lines -SectionHeading 'Knowledge Index'
+        $indexIds = @($rows | ForEach-Object { if ($_.Count -gt 0) { $_[0] } })
+        Add-DuplicateIdErrors -Ids $indexIds -Label 'knowledge index' -Errors $errors
+    }
+    elseif (Test-MarkdownSection -Content $content -SectionHeading 'Glossary Term') {
+        $documentType = 'GlossaryTerm'
+        $termId = Get-ControlFieldValue -Lines $lines -SectionHeading 'Glossary Term' -FieldName 'Term ID'
+        $status = Get-ControlFieldValue -Lines $lines -SectionHeading 'Glossary Term' -FieldName 'Status'
+
+        if (-not [string]::IsNullOrWhiteSpace($termId) -and $status -notmatch '^(Draft|Active|Obsolete)$') {
+            $errors.Add("Invalid glossary term status for ${termId}: '$status'")
+        }
+    }
+    elseif (Test-MarkdownSection -Content $content -SectionHeading 'Business Rule') {
+        $documentType = 'BusinessRule'
+        $ruleId = Get-ControlFieldValue -Lines $lines -SectionHeading 'Business Rule' -FieldName 'Rule ID'
+        $status = Get-ControlFieldValue -Lines $lines -SectionHeading 'Business Rule' -FieldName 'Status'
+
+        if (-not [string]::IsNullOrWhiteSpace($ruleId) -and $status -notmatch '^(Draft|Active|Obsolete)$') {
+            $errors.Add("Invalid business rule status for ${ruleId}: '$status'")
+        }
+    }
+    elseif (Test-MarkdownSection -Content $content -SectionHeading 'Decision Record') {
+        $documentType = 'DecisionRecord'
+        $adrId = Get-ControlFieldValue -Lines $lines -SectionHeading 'Decision Record' -FieldName 'ADR ID'
+        $status = Get-ControlFieldValue -Lines $lines -SectionHeading 'Decision Record' -FieldName 'Status'
+
+        if (-not [string]::IsNullOrWhiteSpace($adrId) -and $status -notmatch '^(Draft|Proposed|Accepted|Superseded|Rejected)$') {
+            $errors.Add("Invalid decision record status for ${adrId}: '$status'")
+        }
     }
     elseif (Test-MarkdownSection -Content $content -SectionHeading 'Traceability Summary') {
         $documentType = 'DetailedDesign'

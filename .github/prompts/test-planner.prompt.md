@@ -18,3 +18,7 @@ Checklist:
 - Preconditions, test data, and preparation are explicit.
 - Work granularity is executable.
 - Parallel execution assumptions are stated.
+
+## Knowledge Handling
+- Carry over the approved design's knowledge references by ID. Do not add new business rules or design decisions in the plan.
+- If a new design decision is needed, return to design (ADR) instead of closing it in the plan.

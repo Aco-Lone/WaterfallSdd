@@ -382,3 +382,145 @@ Describe 'Invoke-TraceabilityHook' {
         $result.hookSpecificOutput.additionalContext | Should Match 'No traceability artifacts changed'
     }
 }
+
+Describe 'Test-TraceabilityDocument knowledge documents' {
+    It 'flags an invalid knowledge delta operation' {
+        $changeDirectory = Join-Path $TestDrive 'openspec/changes/change-k1'
+        New-Item -ItemType Directory -Path $changeDirectory -Force | Out-Null
+
+        $filePath = Join-Path $changeDirectory 'knowledge-delta.md'
+        @'
+# Knowledge Delta
+
+## Knowledge Delta
+
+| Delta ID | Operation | Knowledge ID | Kind | Summary | Related Requirement IDs | Rationale |
+| --- | --- | --- | --- | --- | --- | --- |
+| KDL-001 | CHANGED | AUTH-TERM-001 | TERM | Summary | REQ-001 | Reason |
+'@ | Set-Content -Path $filePath -Encoding UTF8
+
+        $result = Test-TraceabilityDocument -FilePath $filePath
+
+        $result.DocumentType | Should Be 'KnowledgeDelta'
+        $result.IsValid | Should Be $false
+        ($result.Errors -join "`n") | Should Match 'Invalid knowledge delta operation'
+    }
+
+    It 'flags a MODIFIED knowledge id not present in the baseline' {
+        $glossaryDir = Join-Path $TestDrive 'openspec/knowledge/glossary'
+        New-Item -ItemType Directory -Path $glossaryDir -Force | Out-Null
+        @'
+## Glossary Term
+
+| Field | Value |
+| --- | --- |
+| Term ID | AUTH-TERM-001 |
+| Status | Active |
+'@ | Set-Content -Path (Join-Path $glossaryDir 'AUTH-TERM-001.md') -Encoding UTF8
+
+        $changeDirectory = Join-Path $TestDrive 'openspec/changes/change-k2'
+        New-Item -ItemType Directory -Path $changeDirectory -Force | Out-Null
+        $filePath = Join-Path $changeDirectory 'knowledge-delta.md'
+        @'
+# Knowledge Delta
+
+## Knowledge Delta
+
+| Delta ID | Operation | Knowledge ID | Kind | Summary | Related Requirement IDs | Rationale |
+| --- | --- | --- | --- | --- | --- | --- |
+| KDL-001 | MODIFIED | AUTH-RULE-999 | RULE | Summary | REQ-001 | Reason |
+'@ | Set-Content -Path $filePath -Encoding UTF8
+
+        $result = Test-TraceabilityDocument -FilePath $filePath
+
+        $result.IsValid | Should Be $false
+        ($result.Errors -join "`n") | Should Match 'MODIFIED knowledge not found in baseline'
+    }
+
+    It 'flags an invalid glossary term status' {
+        $filePath = Join-Path $TestDrive 'AUTH-TERM-010.md'
+        @'
+## Glossary Term
+
+| Field | Value |
+| --- | --- |
+| Term ID | AUTH-TERM-010 |
+| Status | Retired |
+'@ | Set-Content -Path $filePath -Encoding UTF8
+
+        $result = Test-TraceabilityDocument -FilePath $filePath
+
+        $result.DocumentType | Should Be 'GlossaryTerm'
+        $result.IsValid | Should Be $false
+        ($result.Errors -join "`n") | Should Match 'Invalid glossary term status'
+    }
+
+    It 'flags an invalid decision record status' {
+        $filePath = Join-Path $TestDrive 'ADR-0001-example.md'
+        @'
+## Decision Record
+
+| Field | Value |
+| --- | --- |
+| ADR ID | ADR-0001 |
+| Status | Done |
+'@ | Set-Content -Path $filePath -Encoding UTF8
+
+        $result = Test-TraceabilityDocument -FilePath $filePath
+
+        $result.DocumentType | Should Be 'DecisionRecord'
+        $result.IsValid | Should Be $false
+        ($result.Errors -join "`n") | Should Match 'Invalid decision record status'
+    }
+
+    It 'flags duplicate ids in a knowledge index' {
+        $filePath = Join-Path $TestDrive 'index.md'
+        @'
+# Knowledge Index
+
+## Knowledge Index
+
+| Knowledge ID | Kind | Summary | Status | Owner | Source Path | Subsystem |
+| --- | --- | --- | --- | --- | --- | --- |
+| AUTH-TERM-001 | TERM |  | Active |  | knowledge/glossary/AUTH-TERM-001.md | Auth |
+| AUTH-TERM-001 | TERM |  | Active |  | knowledge/glossary/AUTH-TERM-001.md | Auth |
+'@ | Set-Content -Path $filePath -Encoding UTF8
+
+        $result = Test-TraceabilityDocument -FilePath $filePath
+
+        $result.DocumentType | Should Be 'KnowledgeIndex'
+        $result.IsValid | Should Be $false
+        ($result.Errors -join "`n") | Should Match 'Duplicate knowledge index ID'
+    }
+
+    It 'accepts a valid knowledge delta with matching baseline' {
+        $ruleDir = Join-Path $TestDrive 'openspec/knowledge/business-rules'
+        New-Item -ItemType Directory -Path $ruleDir -Force | Out-Null
+        @'
+## Business Rule
+
+| Field | Value |
+| --- | --- |
+| Rule ID | AUTH-RULE-001 |
+| Status | Active |
+'@ | Set-Content -Path (Join-Path $ruleDir 'AUTH-RULE-001.md') -Encoding UTF8
+
+        $changeDirectory = Join-Path $TestDrive 'openspec/changes/change-k3'
+        New-Item -ItemType Directory -Path $changeDirectory -Force | Out-Null
+        $filePath = Join-Path $changeDirectory 'knowledge-delta.md'
+        @'
+# Knowledge Delta
+
+## Knowledge Delta
+
+| Delta ID | Operation | Knowledge ID | Kind | Summary | Related Requirement IDs | Rationale |
+| --- | --- | --- | --- | --- | --- | --- |
+| KDL-001 | ADDED | AUTH-TERM-020 | TERM | New term | REQ-002 | Reason |
+| KDL-002 | MODIFIED | AUTH-RULE-001 | RULE | Updated rule | REQ-001 | Reason |
+'@ | Set-Content -Path $filePath -Encoding UTF8
+
+        $result = Test-TraceabilityDocument -FilePath $filePath
+
+        $result.IsValid | Should Be $true
+    }
+}

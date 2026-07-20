@@ -18,3 +18,9 @@ Checklist:
 - Activity diagrams match the design body.
 - Error handling and test design are explicit.
 - Open issues are listed without hiding uncertainty.
+
+## Knowledge Handling
+- Resolve approved REQ, TERM, RULE, and Accepted ADRs through openspec/knowledge/index.md, following .github/skills/knowledge-context-resolution/SKILL.md.
+- Reference knowledge by ID in Related Knowledge and Decision Record IDs. Do not restate ADR, term, or rule bodies.
+- Only reference ADRs whose Status is Accepted and not Superseded.
+- For a significant new design decision, create a Draft ADR under the change decisions/ folder instead of burying it in the design body.

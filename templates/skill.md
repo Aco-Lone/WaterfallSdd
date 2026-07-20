@@ -51,7 +51,7 @@ user-invocable: false
 
 - [Relevant template](../../../templates/example.md)
 - [Workflow and gate definition](../../../workflow-approval-gate-definition.md)
-- [Related guide or spec](../../../docs/superpowers/specs/example.md)
+- [Related guide or spec](../../../docs/designs/example.md)
 ```
 
 ## WaterfallSdd Authoring Notes

@@ -58,9 +58,21 @@
 
 ## Design Decisions and Open Issues
 
-| ID | Type | Description | Impacted Requirement IDs | Status |
-| --- | --- | --- | --- | --- |
-| DD-001 | Decision / Open Issue |  | REQ-001 | Open / Closed |
+- This table is an index into Accepted ADRs and open issues. It does not restate decision bodies.
+- For a significant design decision, reference the ADR ID under Decision Record IDs and keep the decision body in the ADR.
+
+| ID | Type | Description | Decision Record IDs | Impacted Requirement IDs | Status |
+| --- | --- | --- | --- | --- | --- |
+| DD-001 | Decision / Open Issue |  | ADR-0001 | REQ-001 | Open / Closed |
+
+## Related Knowledge
+
+- Reference knowledge sources of truth by ID only. Do not copy glossary, business rule, or ADR bodies here.
+- Only reference ADRs whose Status is Accepted and not Superseded.
+
+| Design Element ID | Related Term IDs | Related Rule IDs | Decision Record IDs |
+| --- | --- | --- | --- |
+| DSG-001 | AUTH-TERM-001 | AUTH-RULE-001 | ADR-0001 |
 
 ## Approval
 

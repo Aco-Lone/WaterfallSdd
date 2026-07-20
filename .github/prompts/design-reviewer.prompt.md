@@ -19,3 +19,9 @@ Checklist:
 - Verify activity consistency.
 - Verify error design and test design sufficiency.
 - Verify testability.
+
+## Knowledge Checks
+- Independently re-resolve the design-time knowledge closure using .github/skills/knowledge-context-resolution/SKILL.md.
+- Verify REQ references the required TERM / RULE IDs and DSG references the relevant ADR IDs.
+- Verify referenced ADRs are Accepted and not Superseded, and that no ADR overrides a requirement or business rule.
+- Flag unresolved knowledge or ADR references, use of obsolete or superseded knowledge, and significant decisions embedded without an ADR.

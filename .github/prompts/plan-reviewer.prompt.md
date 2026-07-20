@@ -18,3 +18,7 @@ Checklist:
 - Verify sequence, preparation, and granularity across both plans.
 - Verify parallel execution assumptions.
 - Verify full traceability from requirement to both plans.
+
+## Knowledge Checks
+- Verify the plan preserves the approved knowledge references and introduces no new business rule or design decision.
+- Flag any knowledge or ADR issue closed inside the plan and return it to design instead.

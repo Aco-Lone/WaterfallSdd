@@ -20,3 +20,7 @@ Checklist:
 - Verify failures have a clear return target before any closure recommendation.
 - Verify non-minor findings include REV, REQ, DSG, and TST IDs.
 - Verify Approved is used only when no open non-minor finding remains.
+
+## Knowledge Checks
+- Verify implementation and tests are based on the knowledge set approved at gate time and use no obsolete TERM / RULE / ADR.
+- Flag new business knowledge left only in code, and classify reusable review insight as an improvement candidate.

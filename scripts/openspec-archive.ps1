@@ -1,5 +1,6 @@
 $scriptDirectory = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $scriptDirectory 'traceability-validator.ps1')
+. (Join-Path $scriptDirectory 'knowledge-index.ps1')
 
 function Get-TableBounds {
     param(
@@ -164,6 +165,14 @@ function Test-ArchivePrecondition {
         }
     }
 
+    $knowledgeDeltaPath = Join-Path $ChangeDirectory 'knowledge-delta.md'
+    if (Test-Path $knowledgeDeltaPath) {
+        $knowledgeResult = Test-TraceabilityDocument -FilePath $knowledgeDeltaPath
+        if (-not $knowledgeResult.IsValid) {
+            $errors.Add("Traceability validation failed for ${knowledgeDeltaPath}: $($knowledgeResult.Errors -join '; ')")
+        }
+    }
+
     return $errors
 }
 
@@ -262,6 +271,228 @@ function Add-ChangeHistoryRow {
     $lines | Set-Content -Path $BaselinePath -Encoding UTF8
 }
 
+function Get-KnowledgeDeltaRows {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$KnowledgeDeltaPath
+    )
+
+    $content = Get-Content -Path $KnowledgeDeltaPath -Raw -Encoding UTF8
+    $lines = $content -split "`r?`n"
+    $rows = Get-MarkdownTableRows -Lines $lines -SectionHeading 'Knowledge Delta'
+
+    $deltaRows = New-Object System.Collections.Generic.List[object]
+    foreach ($row in $rows) {
+        $deltaId = if ($row.Count -gt 0) { $row[0] } else { '' }
+        if ([string]::IsNullOrWhiteSpace($deltaId)) {
+            continue
+        }
+
+        $deltaRows.Add([pscustomobject]@{
+            DeltaId = $deltaId
+            Operation = if ($row.Count -gt 1) { $row[1] } else { '' }
+            KnowledgeId = if ($row.Count -gt 2) { $row[2] } else { '' }
+            Kind = if ($row.Count -gt 3) { $row[3] } else { '' }
+            Summary = if ($row.Count -gt 4) { $row[4] } else { '' }
+            RelatedRequirementIds = if ($row.Count -gt 5) { $row[5] } else { '' }
+            Rationale = if ($row.Count -gt 6) { $row[6] } else { '' }
+        })
+    }
+
+    return , $deltaRows.ToArray()
+}
+
+function Get-KnowledgeKindDir {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Kind
+    )
+
+    switch ($Kind.Trim().ToUpperInvariant()) {
+        'TERM' { return 'glossary' }
+        'RULE' { return 'business-rules' }
+        default { return $null }
+    }
+}
+
+function Set-KnowledgeFileField {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath,
+
+        [Parameter(Mandatory = $true)]
+        [string]$FieldName,
+
+        [Parameter(Mandatory = $true)]
+        [string]$NewValue
+    )
+
+    $lines = @(Get-Content -Path $FilePath -Encoding UTF8)
+    $fieldPattern = '^\|\s*' + [regex]::Escape($FieldName) + '\s*\|'
+    for ($index = 0; $index -lt $lines.Count; $index++) {
+        if ($lines[$index] -match $fieldPattern) {
+            $lines[$index] = "| $FieldName | $NewValue |"
+            break
+        }
+    }
+
+    $lines | Set-Content -Path $FilePath -Encoding UTF8
+}
+
+function New-BaselineKnowledgeFile {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Kind,
+
+        [Parameter(Mandatory = $true)]
+        $Delta
+    )
+
+    if ($Kind.Trim().ToUpperInvariant() -eq 'TERM') {
+        $section = 'Glossary Term'
+        $idField = 'Term ID'
+    }
+    else {
+        $section = 'Business Rule'
+        $idField = 'Rule ID'
+    }
+
+    $lines = New-Object System.Collections.Generic.List[string]
+    $lines.Add("## $section")
+    $lines.Add('')
+    $lines.Add('| Field | Value |')
+    $lines.Add('| --- | --- |')
+    $lines.Add("| $idField | $($Delta.KnowledgeId) |")
+    $lines.Add('| Status | Active |')
+    $lines.Add('')
+    $lines.Add('## Summary')
+    $lines.Add('')
+    $lines.Add("- $($Delta.Summary)")
+    $lines.Add('')
+    $lines.Add('## Related Requirement IDs')
+    $lines.Add('')
+    $lines.Add("- $($Delta.RelatedRequirementIds)")
+    $lines.Add('')
+    $lines.Add('## Rationale')
+    $lines.Add('')
+    $lines.Add("- $($Delta.Rationale)")
+
+    New-Item -ItemType Directory -Path (Split-Path -Parent $FilePath) -Force | Out-Null
+    $lines | Set-Content -Path $FilePath -Encoding UTF8
+}
+
+function Update-BaselineKnowledge {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ChangeDirectory,
+
+        [Parameter(Mandatory = $true)]
+        [string]$KnowledgeRoot,
+
+        [Parameter(Mandatory = $true)]
+        $KnowledgeDeltaRows
+    )
+
+    foreach ($delta in $KnowledgeDeltaRows) {
+        $kindDir = Get-KnowledgeKindDir -Kind $delta.Kind
+        if ($null -eq $kindDir) {
+            continue
+        }
+
+        $fileName = "$($delta.KnowledgeId).md"
+        $baselineFile = Join-Path $KnowledgeRoot (Join-Path 'knowledge' (Join-Path $kindDir $fileName))
+        $changeLocalFile = Join-Path $ChangeDirectory (Join-Path 'knowledge' (Join-Path $kindDir $fileName))
+
+        switch ($delta.Operation) {
+            'ADDED' {
+                New-Item -ItemType Directory -Path (Split-Path -Parent $baselineFile) -Force | Out-Null
+                if (Test-Path $changeLocalFile) {
+                    Copy-Item -Path $changeLocalFile -Destination $baselineFile -Force
+                }
+                else {
+                    New-BaselineKnowledgeFile -FilePath $baselineFile -Kind $delta.Kind -Delta $delta
+                }
+            }
+            'MODIFIED' {
+                if (Test-Path $changeLocalFile) {
+                    New-Item -ItemType Directory -Path (Split-Path -Parent $baselineFile) -Force | Out-Null
+                    Copy-Item -Path $changeLocalFile -Destination $baselineFile -Force
+                }
+                elseif (Test-Path $baselineFile) {
+                    Set-KnowledgeFileField -FilePath $baselineFile -FieldName 'Status' -NewValue 'Active'
+                }
+            }
+            'REMOVED' {
+                if (Test-Path $baselineFile) {
+                    Set-KnowledgeFileField -FilePath $baselineFile -FieldName 'Status' -NewValue 'Obsolete'
+                }
+            }
+        }
+    }
+}
+
+function Get-KnowledgeFileFieldValue {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath,
+
+        [Parameter(Mandatory = $true)]
+        [string]$FieldName
+    )
+
+    $fieldPattern = '^\|\s*' + [regex]::Escape($FieldName) + '\s*\|\s*(.*?)\s*\|'
+    foreach ($line in Get-Content -Path $FilePath -Encoding UTF8) {
+        if ($line -match $fieldPattern) {
+            return $Matches[1].Trim()
+        }
+    }
+
+    return ''
+}
+
+function Promote-DecisionRecords {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ChangeDirectory,
+
+        [Parameter(Mandatory = $true)]
+        [string]$KnowledgeRoot
+    )
+
+    $changeDecisionsDir = Join-Path $ChangeDirectory 'decisions'
+    if (-not (Test-Path $changeDecisionsDir)) {
+        return
+    }
+
+    $baselineDecisionsDir = Join-Path $KnowledgeRoot 'decisions'
+    New-Item -ItemType Directory -Path $baselineDecisionsDir -Force | Out-Null
+
+    foreach ($file in Get-ChildItem -Path $changeDecisionsDir -Filter '*.md' -File) {
+        $status = Get-KnowledgeFileFieldValue -FilePath $file.FullName -FieldName 'Status'
+        if ($status -ne 'Accepted') {
+            continue
+        }
+
+        $destination = Join-Path $baselineDecisionsDir $file.Name
+        Copy-Item -Path $file.FullName -Destination $destination -Force
+
+        $supersedes = Get-KnowledgeFileFieldValue -FilePath $file.FullName -FieldName 'Supersedes'
+        $newAdrId = Get-KnowledgeFileFieldValue -FilePath $file.FullName -FieldName 'ADR ID'
+        if (-not [string]::IsNullOrWhiteSpace($supersedes)) {
+            foreach ($existing in Get-ChildItem -Path $baselineDecisionsDir -Filter '*.md' -File) {
+                $existingId = Get-KnowledgeFileFieldValue -FilePath $existing.FullName -FieldName 'ADR ID'
+                if ($existingId -eq $supersedes) {
+                    Set-KnowledgeFileField -FilePath $existing.FullName -FieldName 'Status' -NewValue 'Superseded'
+                    Set-KnowledgeFileField -FilePath $existing.FullName -FieldName 'Superseded By' -NewValue $newAdrId
+                }
+            }
+        }
+    }
+}
+
 function Invoke-OpenSpecArchive {
     param(
         [Parameter(Mandatory = $true)]
@@ -270,7 +501,6 @@ function Invoke-OpenSpecArchive {
         [Parameter(Mandatory = $false)]
         [string]$WorkspaceRoot = (Get-Location).Path
     )
-
     $changeDirectory = Join-Path $WorkspaceRoot (Join-Path 'openspec/changes' $ChangeId)
     $baselinePath = Join-Path $WorkspaceRoot 'openspec/specs/subsystem-spec.md'
     $archiveRoot = Join-Path $WorkspaceRoot 'openspec/changes/archive'
@@ -289,6 +519,16 @@ function Invoke-OpenSpecArchive {
 
     Update-BaselineRequirements -BaselinePath $baselinePath -DeltaRows $deltaRows
     Add-ChangeHistoryRow -BaselinePath $baselinePath -ChangeId $ChangeId -DeltaRows $deltaRows
+
+    $knowledgeRoot = Join-Path $WorkspaceRoot 'openspec'
+    $knowledgeDeltaPath = Join-Path $changeDirectory 'knowledge-delta.md'
+    if (Test-Path $knowledgeDeltaPath) {
+        $knowledgeDeltaRows = Get-KnowledgeDeltaRows -KnowledgeDeltaPath $knowledgeDeltaPath
+        Update-BaselineKnowledge -ChangeDirectory $changeDirectory -KnowledgeRoot $knowledgeRoot -KnowledgeDeltaRows $knowledgeDeltaRows
+    }
+
+    Promote-DecisionRecords -ChangeDirectory $changeDirectory -KnowledgeRoot $knowledgeRoot
+    Invoke-KnowledgeIndex -WorkspaceRoot $WorkspaceRoot | Out-Null
 
     if (-not (Test-Path $archiveRoot)) {
         New-Item -ItemType Directory -Path $archiveRoot -Force | Out-Null

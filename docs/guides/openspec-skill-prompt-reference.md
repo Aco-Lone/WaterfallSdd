@@ -218,6 +218,7 @@ Step 7 以降に該当する post-G2 実行とレビューの詳細は [OpenSpec
 | delta-operation-classification | 要件変更を spec delta として ADDED / MODIFIED / REMOVED に分類 | 変更起案時の spec-delta.md 作成 | baseline との要件 ID 照合、操作種別の妥当性、ID 安定化規約との 1:1 対応 |
 | change-impact-mapping | spec delta が影響する csproj 成果物を特定し再レビュー要否を決める | 変更起案時の impact-map.md 作成 | 全 delta 要件の対応付け、影響 DSG / PLN / TST 参照、再レビュー判定 |
 | change-archiving | 全ゲート承認後に spec delta を baseline へ畳み込み change を退避 | 変更ライフサイクルの G3 アーカイブ時 | proposal 承認状態、検証通過、baseline 反映、archive 退避 |
+| knowledge-context-resolution | 対象工程で読むべき TERM / RULE / ADR を明示 ID 参照で決定的に解決 | 各工程の作業前、G1 / G2 / 実装・テストレビュー時 | 明示 ID 優先、Status / Superseded 評価、未解決参照と競合検出、Context Manifest |
 
 ### 3.0 dig
 

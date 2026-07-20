@@ -52,7 +52,7 @@ Review completed post-G2 test execution. Compare test execution results against 
 
 ## Report File
 - If the user provides a report path, write the review report there.
-- Otherwise create `docs/superpowers/specs/YYYY-MM-DD-test-review-report.md`.
+- Otherwise create `docs/designs/YYYY-MM-DD-test-review-report.md`.
 - The Markdown file is the authoritative review output; do not leave the review result only in chat.
 - In chat, return the report file path and a concise decision summary.
 
@@ -65,3 +65,7 @@ Review completed post-G2 test execution. Compare test execution results against 
 - Traceability Check Summary with untraced Requirement IDs and Design Element IDs
 - Findings table aligned to [the review record template](../../templates/review-record.md)
 - Handoff recommendation: review-improvement-analyst, test-executor, test-planner, implementation-executor, implementation-planner, detailed-design-author, or Minor Fix
+
+## Knowledge Checks
+- Verify implementation and tests are based on the knowledge set approved at gate time and use no obsolete TERM / RULE / ADR.
+- Flag new business knowledge left only in code, and classify reusable review insight as an improvement candidate.

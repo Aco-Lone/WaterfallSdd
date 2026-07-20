@@ -126,3 +126,103 @@ Describe 'Invoke-OpenSpecArchive' {
         ($result.Errors -join "`n") | Should Match 'Traceability validation failed'
     }
 }
+
+Describe 'Invoke-OpenSpecArchive knowledge' {
+    It 'applies the knowledge delta, promotes accepted ADRs, and regenerates the index' {
+        $changeDirectory = New-SampleChange -Root $TestDrive -ChangeId 'change-k'
+
+        $glossaryDir = Join-Path $TestDrive 'openspec/knowledge/glossary'
+        New-Item -ItemType Directory -Path $glossaryDir -Force | Out-Null
+        @'
+## Glossary Term
+
+| Field | Value |
+| --- | --- |
+| Term ID | AUTH-TERM-001 |
+| Status | Active |
+'@ | Set-Content -Path (Join-Path $glossaryDir 'AUTH-TERM-001.md') -Encoding UTF8
+
+        @'
+# Knowledge Delta
+
+## Knowledge Delta
+
+| Delta ID | Operation | Knowledge ID | Kind | Summary | Related Requirement IDs | Rationale |
+| --- | --- | --- | --- | --- | --- | --- |
+| KDL-001 | ADDED | AUTH-TERM-020 | TERM | New added term | REQ-010 | New term reason |
+| KDL-002 | REMOVED | AUTH-TERM-001 | TERM |  | REQ-001 | Retire reason |
+'@ | Set-Content -Path (Join-Path $changeDirectory 'knowledge-delta.md') -Encoding UTF8
+
+        $changeDecisionsDir = Join-Path $changeDirectory 'decisions'
+        New-Item -ItemType Directory -Path $changeDecisionsDir -Force | Out-Null
+        @'
+## Decision Record
+
+| Field | Value |
+| --- | --- |
+| ADR ID | ADR-0001 |
+| Title | Use token auth |
+| Status | Accepted |
+| Supersedes |  |
+| Superseded By |  |
+'@ | Set-Content -Path (Join-Path $changeDecisionsDir 'ADR-0001-token.md') -Encoding UTF8
+
+        $result = Invoke-OpenSpecArchive -ChangeId 'change-k' -WorkspaceRoot $TestDrive
+
+        $result.Archived | Should Be $true
+
+        $addedTermPath = Join-Path $TestDrive 'openspec/knowledge/glossary/AUTH-TERM-020.md'
+        (Test-Path $addedTermPath) | Should Be $true
+
+        $removedTerm = Get-Content -Path (Join-Path $TestDrive 'openspec/knowledge/glossary/AUTH-TERM-001.md') -Raw -Encoding UTF8
+        $removedTerm | Should Match 'Obsolete'
+
+        $promotedAdrPath = Join-Path $TestDrive 'openspec/decisions/ADR-0001-token.md'
+        (Test-Path $promotedAdrPath) | Should Be $true
+
+        $index = Get-Content -Path (Join-Path $TestDrive 'openspec/knowledge/index.md') -Raw -Encoding UTF8
+        $index | Should Match 'AUTH-TERM-020'
+        $index | Should Match 'ADR-0001'
+    }
+
+    It 'sets superseded by on a baseline ADR replaced by a promoted ADR' {
+        $changeDirectory = New-SampleChange -Root $TestDrive -ChangeId 'change-k-super'
+
+        $baselineDecisionsDir = Join-Path $TestDrive 'openspec/decisions'
+        New-Item -ItemType Directory -Path $baselineDecisionsDir -Force | Out-Null
+        @'
+## Decision Record
+
+| Field | Value |
+| --- | --- |
+| ADR ID | ADR-0001 |
+| Title | Old decision |
+| Status | Accepted |
+| Supersedes |  |
+| Superseded By |  |
+'@ | Set-Content -Path (Join-Path $baselineDecisionsDir 'ADR-0001-old.md') -Encoding UTF8
+
+        $changeDecisionsDir = Join-Path $changeDirectory 'decisions'
+        New-Item -ItemType Directory -Path $changeDecisionsDir -Force | Out-Null
+        @'
+## Decision Record
+
+| Field | Value |
+| --- | --- |
+| ADR ID | ADR-0002 |
+| Title | New decision |
+| Status | Accepted |
+| Supersedes | ADR-0001 |
+| Superseded By |  |
+'@ | Set-Content -Path (Join-Path $changeDecisionsDir 'ADR-0002-new.md') -Encoding UTF8
+
+        $result = Invoke-OpenSpecArchive -ChangeId 'change-k-super' -WorkspaceRoot $TestDrive
+
+        $result.Archived | Should Be $true
+
+        $oldAdr = Get-Content -Path (Join-Path $baselineDecisionsDir 'ADR-0001-old.md') -Raw -Encoding UTF8
+        $oldAdr | Should Match 'Superseded'
+        $oldAdr | Should Match 'ADR-0002'
+    }
+}
+

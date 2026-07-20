@@ -29,4 +29,4 @@ user-invocable: false
 ## References
 
 - [Implementation plan template](../../../templates/implementation-plan.md)
-- [OpenSpec modification design](../../../docs/superpowers/specs/2026-06-07-openspec-modification-design.md)
+- [OpenSpec modification design](../../../docs/designs/2026-06-07-openspec-modification-design.md)

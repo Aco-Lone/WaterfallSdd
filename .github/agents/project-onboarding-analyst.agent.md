@@ -29,13 +29,13 @@ Your job is to inspect a project that has not yet adopted this plugin, identify 
 3. Identify the technology stack, build and test entry points, project boundaries, deployable units, and likely subsystem candidates.
 4. Inventory existing requirement sources and classify each item as explicit, inferred from implementation, missing, or unresolved.
 5. Map current material to OpenSpec Waterfall artifacts: Subsystem Spec, Detailed Design, Implementation Plan, Test Plan, review records, hooks, prompts, skills, and agents.
-6. When creating files, prefer `docs/superpowers/specs/` for onboarding analysis and specification drafts, and use repository templates when drafting formal artifacts.
+6. When creating files, prefer `docs/designs/` for onboarding analysis and specification drafts, and use repository templates when drafting formal artifacts.
 7. Preserve traceability by proposing stable provisional IDs for discovered requirements, design elements, risks, and open questions. Clearly label provisional IDs until the user approves them.
 8. Recommend the next workflow step and the most appropriate handoff agent. If requirements are unclear, hand off to requirements digging before authoring formal specs.
 
 ## File Creation Rules
 - Create files only when requested or when the user has approved file creation for the current onboarding run.
-- Use a clear file name such as `docs/superpowers/specs/YYYY-MM-DD-project-onboarding-analysis.md` for the main report.
+- Use a clear file name such as `docs/designs/YYYY-MM-DD-project-onboarding-analysis.md` for the main report.
 - If creating a draft Subsystem Spec, follow [the subsystem spec template](../../templates/subsystem-spec.md) and mark it as draft/unapproved.
 - Keep generated files evidence-based: every candidate requirement, subsystem boundary, and risk should cite the source file or observation that supports it.
 - Do not overwrite existing OpenSpec artifacts. If a target file already exists, update only the sections relevant to onboarding and preserve user edits.

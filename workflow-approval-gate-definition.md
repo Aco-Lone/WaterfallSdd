@@ -108,6 +108,11 @@
 - hook は Spec Delta の Operation が ADDED / MODIFIED / REMOVED 以外の値を失敗とする
 - hook は ADDED の要件 ID が baseline に既存、または MODIFIED / REMOVED の要件 ID が baseline に不在の場合を失敗とする
 - hook は Impact Map に spec delta の未マップ要件 ID、ADDED / MODIFIED 行の影響 csproj 欠落、再レビュー必要なのに Gate Record が空の行を失敗とする
+- hook は Glossary Term / Business Rule / ADR / Knowledge Delta の Markdown を対象に知識 ID とライフサイクルを機械的検証する
+- hook は Knowledge Delta の Operation が ADDED / MODIFIED / REMOVED 以外の値を失敗とする
+- hook は ADDED の知識 ID が baseline に既存、または MODIFIED / REMOVED の知識 ID が baseline に不在の場合を失敗とする
+- hook は ADR の Status が Draft / Proposed / Accepted / Superseded / Rejected 以外の値を失敗とする
+- hook は Glossary Term / Business Rule の Status が Draft / Active / Obsolete 以外の値を失敗とする
 
 ## 6. 指摘の分類基準
 
@@ -322,6 +327,10 @@ flowchart TD
 - proposal.md の Status が Approved であるか
 - 必要なゲート記録が承認済みか
 - spec-delta.md と impact-map.md がトレーサビリティ検証をパスしているか
+- knowledge-delta.md の Operation と対象 ID が妥当であるか
+- MODIFIED / REMOVED の知識 ID が baseline に存在し、ADDED の知識 ID が baseline に不在であるか
+- Accepted ADR の関連 ID が解決できるか
+- Knowledge Index が更新されているか
 
 ### 承認条件
 
@@ -331,7 +340,68 @@ flowchart TD
 
 - scripts/openspec-archive.ps1 を change ID 指定で明示実行する。hook では実行しない。
 - spec-delta を baseline へ反映し（ADDED 追記 / MODIFIED 更新 / REMOVED は Status を Obsolete）、change フォルダを openspec/changes/archive/<yyyymmdd>-<change-id>/ へ移動する。
+- knowledge-delta を baseline の Glossary / Business Rules へ反映し（ADDED 追加 / MODIFIED 更新 / REMOVED は Status を Obsolete）、Accepted ADR を openspec/decisions/ へ移送する。
+- 置換された ADR に Superseded By を設定し、Knowledge Index を再生成する。
 
 ### 差戻し条件
 
 - 確認項目のいずれかが未充足であること。この場合 archive は拒否される。
+
+## 16. ナレッジ管理とライフサイクル
+
+### 16.1 知識資産の正本
+
+- ドメイン用語は openspec/knowledge/glossary/ 配下に TERM 単位のファイルで正本を置く。
+- 業務ルールは openspec/knowledge/business-rules/ 配下に RULE 単位のファイルで正本を置く。
+- 重要な設計判断は openspec/decisions/ 配下に ADR 単位のファイルで正本を置く。
+- Knowledge Index（openspec/knowledge/index.md）は正本への参照だけを持ち、scripts/knowledge-index.ps1 で生成する。手書きしない。
+- 知識本文を複数成果物へ複製しない。skill と custom instructions には取得手順だけを置く。
+
+### 16.2 ID とトレーサビリティ
+
+- TERM は用語、RULE は業務ルール、ADR は設計判断へ一意 ID を付与する。ADR はリポジトリ全体で連番とする。
+- 最低限 TERM -> REQ、RULE -> REQ / DSG、ADR -> REQ / RULE / DSG、REV -> TERM / RULE / ADR を追跡可能にする。
+- Subsystem Spec は Related Knowledge、Detailed Design は Related Knowledge と Decision Record IDs で ID 参照する。
+
+### 16.3 baseline と change の分離
+
+- baseline の知識は G3 アーカイブ操作でのみ更新する。変更中に baseline を直接編集しない。
+- 進行中の用語・ルール変更は openspec/changes/<change-id>/knowledge-delta.md に記録する。
+- 進行中の設計判断は change 配下の decisions/ に Draft ADR として置く。
+- Accepted ADR は不変記録とし、書き換えず新しい ADR から Superseded By で置換する。
+
+### 16.4 情報の権威と競合処理
+
+情報の権威は次の順で評価する。上位を下位で上書きしない。ADR は REQ / RULE を上書きしない。
+
+1. 現在の change で承認済みの delta
+2. baseline の Active な REQ / RULE / TERM
+3. Accepted かつ未置換の ADR
+4. 承認済み Detailed Design
+5. 承認済み Implementation Plan / Test Plan
+6. Review Record と実行結果
+7. 実装コードから推測した挙動
+
+矛盾を検出した場合は、競合する ID・Status・正本パスを示し、推測で解消せず差し戻し先を提示する。
+
+### 16.5 AI の知識取得
+
+- AI は明示 ID 参照を正規の取得経路とし、全文検索は候補発見に限定する。
+- 会話履歴や memory は補助キャッシュであり、知識の正本にしない。
+- 工程別の取得範囲と制約は .github/skills/knowledge-context-resolution/SKILL.md に従う。
+- ゲートおよびレビュー時に Context Manifest を生成し、承認時から判断根拠が変化していないか確認する。導入初期は任意、自動検証導入段階で必須化する。
+
+### 16.6 ゲートへの知識確認の組み込み
+
+- G1 では REQ が TERM / RULE を、DSG が Accepted ADR を参照し、ADR が REQ / RULE を上書きしないことを確認する。
+- G2 では Plan が承認済み知識参照を維持し、新しい業務ルールや設計判断を Plan 内で追加・完結していないことを確認する。
+- 実装レビュー / テストレビューでは承認時の知識集合に基づき、廃止 TERM / RULE / ADR を使用せず、新知見をコードだけに残していないことを確認する。
+- G3 では Knowledge Delta と ADR の反映妥当性、baseline の存在条件、Index 更新を確認する。
+
+### 16.7 レビュー知見の昇格
+
+1. REV として事実・影響 ID・根本原因を記録する。
+2. 局所的な問題は対象成果物の修正だけで閉じる。
+3. 複数回発生、または一度でも重大な工程逸脱を招いた問題を改善候補とする。
+4. 工程固有の手順は workspace skill、横断的な既定動作は custom instructions、機械判定可能な規則は validator へ昇格する。
+5. skill と custom instructions にはプロジェクト固有の TERM / RULE 本文を複製せず、正本参照手順だけを残す。
