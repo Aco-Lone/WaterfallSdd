@@ -329,34 +329,39 @@ function Set-KnowledgeFileField {
 
     $lines = @(Get-Content -Path $FilePath -Encoding UTF8)
     $fieldPattern = '^' + [regex]::Escape($FieldName) + ':\s*'
-    $inFrontmatter = $false
+    $openIndex = -1
+    $closeIndex = -1
     $updated = $false
 
     for ($index = 0; $index -lt $lines.Count; $index++) {
         if ($lines[$index].Trim() -eq '---') {
-            if (-not $inFrontmatter) {
-                $inFrontmatter = $true
+            if ($openIndex -lt 0) {
+                $openIndex = $index
                 continue
             }
             else {
+                $closeIndex = $index
                 break
             }
         }
 
-        if ($inFrontmatter -and $lines[$index] -match $fieldPattern) {
+        if ($openIndex -ge 0 -and $lines[$index] -match $fieldPattern) {
             $lines[$index] = "${FieldName}: $NewValue"
             $updated = $true
             break
         }
     }
 
-    if (-not $updated -and $inFrontmatter) {
-        # Insert the field just after the opening frontmatter marker.
-        for ($index = 0; $index -lt $lines.Count; $index++) {
-            if ($lines[$index].Trim() -eq '---') {
-                $lines = $lines[0..$index] + @("${FieldName}: $NewValue") + $lines[($index + 1)..($lines.Count - 1)]
-                break
-            }
+    if (-not $updated) {
+        if ($openIndex -ge 0 -and $closeIndex -gt $openIndex) {
+            # Insert the new field just before the closing frontmatter marker.
+            $before = if ($closeIndex -gt 0) { $lines[0..($closeIndex - 1)] } else { @() }
+            $after = $lines[$closeIndex..($lines.Count - 1)]
+            $lines = @($before) + @("${FieldName}: $NewValue") + @($after)
+        }
+        else {
+            # No frontmatter block exists; create one at the top of the file.
+            $lines = @('---', "${FieldName}: $NewValue", '---', '') + $lines
         }
     }
 
