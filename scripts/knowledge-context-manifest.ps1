@@ -23,13 +23,9 @@ function Get-KnowledgeFilePath {
 
         foreach ($file in Get-ChildItem -Path $dir -Filter '*.md' -File) {
             $lines = (Get-Content -Path $file.FullName -Raw -Encoding UTF8) -split "`r?`n"
-            foreach ($section in @('Glossary Term', 'Business Rule', 'Decision Record')) {
-                foreach ($field in @('Term ID', 'Rule ID', 'ADR ID')) {
-                    $value = Get-ControlFieldValue -Lines $lines -SectionHeading $section -FieldName $field
-                    if ($value -eq $KnowledgeId) {
-                        return $file.FullName
-                    }
-                }
+            $value = Get-FrontmatterValue -Lines $lines -Key 'id'
+            if ($value -eq $KnowledgeId) {
+                return $file.FullName
             }
         }
     }
@@ -44,11 +40,9 @@ function Get-KnowledgeStatus {
     )
 
     $lines = (Get-Content -Path $FilePath -Raw -Encoding UTF8) -split "`r?`n"
-    foreach ($section in @('Glossary Term', 'Business Rule', 'Decision Record')) {
-        $status = Get-ControlFieldValue -Lines $lines -SectionHeading $section -FieldName 'Status'
-        if (-not [string]::IsNullOrWhiteSpace($status)) {
-            return $status
-        }
+    $status = Get-FrontmatterValue -Lines $lines -Key 'status'
+    if (-not [string]::IsNullOrWhiteSpace($status)) {
+        return $status
     }
 
     return ''
