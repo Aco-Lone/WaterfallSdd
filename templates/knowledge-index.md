@@ -1,8 +1,13 @@
+---
+type: bundle
+title: Knowledge Index
+---
+
 # Knowledge Index Template
 
 ## Index Principles
 
-- This index is the entry point for humans and AI to discover knowledge.
+- This index is the entry point for humans and AI to discover knowledge (OKF `type: bundle`).
 - It holds references only. It does not hold knowledge bodies.
 - This file is generated from the sources of truth. Do not edit it by hand.
 - Regenerate it with `scripts/knowledge-index.ps1` after knowledge or decision files change.

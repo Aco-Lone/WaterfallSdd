@@ -441,8 +441,6 @@ skill と custom instructions にはプロジェクト固有の TERM / RULE 本�
 
 実装計画を作成する前に、次を確定する。
 
-- Glossary と Business Rules を単一 Markdown テーブルで管理するか、項目単位のファイルに分割するか
-- Knowledge Index を手動管理するか、正本から生成するか
 - Context Manifest の JSON schema と保存期間
 - warning から error へ昇格する条件
 - ADR の採番単位を全体、subsystem、または csproj のどれにするか
@@ -462,3 +460,62 @@ skill と custom instructions にはプロジェクト固有の TERM / RULE 本�
 - 成熟したレビュー知見だけを実行可能な規則へ昇格する
 
 本書は方針設計であり、テンプレート、validator、archive、agent、skill の具体的な実装は、未決事項を解消した後に別の Implementation Plan で定義する。
+
+## 20. Open Knowledge Format (OKF) 準拠
+
+本方針の正本（TERM / RULE / ADR および索引）は、Open Knowledge Format (OKF) に準拠して管理する。OKF は、知識を「YAML frontmatter（`type` 必須）を持つ Markdown ファイルのディレクトリツリー」として表現し、ルートに `index.md` を、変更履歴に `log.md` を置く、ベンダー非依存の軽量標準である。人間可読性、Git による差分レビュー、AI エージェントによる決定的な処理を両立する。
+
+### 20.1 バンドルルートと構成
+
+OKF バンドルのルートは `openspec/knowledge/` とする。ADR は判断の正本として `openspec/decisions/` に置き、同じ OKF frontmatter 規約を適用する。
+
+```text
+openspec/
+  knowledge/            ← OKF バンドルルート
+    index.md            ← type: bundle（正本から自動生成、目次と全 ID 参照）
+    log.md              ← type: changelog（更新履歴を Agent が追記）
+    glossary/<TERM-ID>.md      ← type: glossary-term
+    business-rules/<RULE-ID>.md ← type: business-rule
+  decisions/<ADR-ID>.md         ← type: decision-record
+  changes/<change-id>/knowledge-delta.md ← type: knowledge-delta
+```
+
+### 20.2 メタ情報の frontmatter 一本化
+
+正本のメタ情報は、Markdown の Document Control 表を廃止し、YAML frontmatter に一本化する。本文（Definition、Condition/Result/Exception、Context/Decision など）は Markdown セクションのまま維持する。
+
+各 `type` の frontmatter フィールドは次のとおり。`type` は OKF の必須フィールドであり、`id` はファイル名と一致させる。
+
+| type | 必須フィールド | 追加フィールド |
+| --- | --- | --- |
+| `glossary-term` | `type`, `id`, `status` | `owner`, `subsystem`, `effective_from`, `effective_until`, `related_reqs` |
+| `business-rule` | `type`, `id`, `status` | `owner`, `subsystem`, `effective_from`, `effective_until`, `related_reqs` |
+| `decision-record` | `type`, `id`, `status` | `title`, `owner`, `approver`, `decision_date`, `supersedes`, `superseded_by`, `related_reqs`, `related_rules`, `related_designs` |
+| `knowledge-delta` | `type`, `change_id`, `status` | `author`, `reviewer` |
+| `bundle` | `type` | `title` |
+| `changelog` | `type` | `title` |
+
+`status` の許容値は従来どおり、TERM / RULE は `Draft / Active / Obsolete`、ADR は `Draft / Proposed / Accepted / Superseded / Rejected` とする。
+
+### 20.3 索引と履歴の自動生成
+
+`index.md`（`type: bundle`）と `log.md`（`type: changelog`）は正本から生成・追記する自動更新物とし、人手で直接編集しない。`index.md` は本文を持たず、全 Knowledge ID の参照表だけを保持する。`log.md` は、どの change / REV でどの ID をどの操作（ADDED / MODIFIED / REMOVED）で更新したかを追記する。
+
+### 20.4 Agent による自動更新の権限区分
+
+開発を進める中で Agent が知識を自動更新する範囲を、承認ゲートを壊さないよう次の 3 区分で定義する。
+
+- 区分 A（人間承認不要・Agent が自動実行）: `index.md` の再生成、`log.md` への追記、frontmatter の機械的整合（`status` / `effective_from` / `supersedes` の正規化）、トレーサビリティと OKF 妥当性の検証。
+- 区分 B（Agent が Draft 起票・人間承認が必要）: 新規 TERM / RULE / ADR を `status: Draft` で起票、change 配下 `knowledge-delta.md` への ADDED / MODIFIED / REMOVED 追記、レビュー知見からの RULE / ADR 昇格提案。
+- 区分 C（禁止）: 承認前 Draft で baseline を直接更新、Accepted ADR 本文の書き換え、実装コードだけからの業務ルール自動承認、会話履歴を正本として書き込むこと。
+
+自動更新のトリガーは、(1) 各工程 Agent が新しい用語 / 判断を検出したとき（区分 B）、(2) change の承認ゲート通過時に baseline へ反映し索引と履歴を再生成するとき（区分 A）、(3) レビュー工程で再発防止知見を昇格提案するとき（区分 B）とする。
+
+### 20.5 OKF 妥当性検証
+
+自動検証には、既存のトレーサビリティ検証に加えて次を含める。
+
+- すべての正本ファイルが frontmatter に `type` を持つ
+- `id` がファイル名（拡張子を除く）と一致する
+- Knowledge ID が重複しない
+- `index.md` の参照パスと `id` が実体と一致する

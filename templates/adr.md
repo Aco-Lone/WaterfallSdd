@@ -1,17 +1,26 @@
+---
+type: decision-record
+id: ADR-0001
+title: ""
+status: Draft
+owner: ""
+approver: ""
+decision_date: ""
+supersedes: ""
+superseded_by: ""
+related_reqs:
+  - REQ-001
+related_rules:
+  - AUTH-RULE-001
+related_designs:
+  - DSG-001
+---
+
 # Architecture Decision Record Template
 
-## Decision Record
-
-| Field | Value |
-| --- | --- |
-| ADR ID |  |
-| Title |  |
-| Status | Draft / Proposed / Accepted / Superseded / Rejected |
-| Owner |  |
-| Approver |  |
-| Decision Date |  |
-| Supersedes |  |
-| Superseded By |  |
+- OKF `type: decision-record`. Metadata lives in the YAML frontmatter above; there is no Markdown control table.
+- `status` allows one of: Draft / Proposed / Accepted / Superseded / Rejected.
+- `id` must match the file name prefix, for example ADR-0001 in ADR-0001-example.md.
 
 ## Context
 
@@ -46,21 +55,10 @@
 
 - 
 
-## Related Requirement IDs
-
-- REQ-001
-
-## Related Rule IDs
-
-- AUTH-RULE-001
-
-## Related Design Element IDs
-
-- DSG-001
-
 ## Notes
 
+- Related Requirement / Rule / Design Element IDs and Supersedes / Superseded By are recorded in the frontmatter above.
 - Create an ADR only when multiple options exist and the decision affects future change cost, quality attributes, responsibility boundaries, or external constraints.
 - ADR IDs are numbered sequentially across the whole repository, for example ADR-0001.
-- An Accepted ADR is an immutable record. Do not rewrite it. Record replacement from a new ADR using Supersedes / Superseded By.
+- An Accepted ADR is an immutable record. Do not rewrite it. Record replacement from a new ADR using the `supersedes` / `superseded_by` frontmatter fields.
 - An ADR cannot override a requirement or a business rule.
