@@ -1,5 +1,5 @@
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$validatorPath = Join-Path $repoRoot 'scripts\traceability-validator.ps1'
+$validatorPath = Join-Path $repoRoot 'scripts' 'traceability-validator.ps1'
 
 if (-not (Test-Path $validatorPath)) {
     throw "Validator script not found: $validatorPath"
@@ -390,6 +390,11 @@ Describe 'Test-TraceabilityDocument knowledge documents' {
 
         $filePath = Join-Path $changeDirectory 'knowledge-delta.md'
         @'
+---
+type: knowledge-delta
+change_id: change-k1
+status: Draft
+---
 # Knowledge Delta
 
 ## Knowledge Delta
@@ -410,18 +415,23 @@ Describe 'Test-TraceabilityDocument knowledge documents' {
         $glossaryDir = Join-Path $TestDrive 'openspec/knowledge/glossary'
         New-Item -ItemType Directory -Path $glossaryDir -Force | Out-Null
         @'
-## Glossary Term
-
-| Field | Value |
-| --- | --- |
-| Term ID | AUTH-TERM-001 |
-| Status | Active |
+---
+type: glossary-term
+id: AUTH-TERM-001
+status: Active
+---
+# Glossary Term
 '@ | Set-Content -Path (Join-Path $glossaryDir 'AUTH-TERM-001.md') -Encoding UTF8
 
         $changeDirectory = Join-Path $TestDrive 'openspec/changes/change-k2'
         New-Item -ItemType Directory -Path $changeDirectory -Force | Out-Null
         $filePath = Join-Path $changeDirectory 'knowledge-delta.md'
         @'
+---
+type: knowledge-delta
+change_id: change-k2
+status: Draft
+---
 # Knowledge Delta
 
 ## Knowledge Delta
@@ -440,12 +450,12 @@ Describe 'Test-TraceabilityDocument knowledge documents' {
     It 'flags an invalid glossary term status' {
         $filePath = Join-Path $TestDrive 'AUTH-TERM-010.md'
         @'
-## Glossary Term
-
-| Field | Value |
-| --- | --- |
-| Term ID | AUTH-TERM-010 |
-| Status | Retired |
+---
+type: glossary-term
+id: AUTH-TERM-010
+status: Retired
+---
+# Glossary Term
 '@ | Set-Content -Path $filePath -Encoding UTF8
 
         $result = Test-TraceabilityDocument -FilePath $filePath
@@ -455,15 +465,34 @@ Describe 'Test-TraceabilityDocument knowledge documents' {
         ($result.Errors -join "`n") | Should Match 'Invalid glossary term status'
     }
 
+    It 'flags a glossary term id that does not match the file name' {
+        $filePath = Join-Path $TestDrive 'AUTH-TERM-011.md'
+        @'
+---
+type: glossary-term
+id: AUTH-TERM-999
+status: Active
+---
+# Glossary Term
+'@ | Set-Content -Path $filePath -Encoding UTF8
+
+        $result = Test-TraceabilityDocument -FilePath $filePath
+
+        $result.DocumentType | Should Be 'GlossaryTerm'
+        $result.IsValid | Should Be $false
+        ($result.Errors -join "`n") | Should Match 'does not match file name'
+    }
+
     It 'flags an invalid decision record status' {
         $filePath = Join-Path $TestDrive 'ADR-0001-example.md'
         @'
-## Decision Record
-
-| Field | Value |
-| --- | --- |
-| ADR ID | ADR-0001 |
-| Status | Done |
+---
+type: decision-record
+id: ADR-0001
+title: Example
+status: Done
+---
+# Decision Record
 '@ | Set-Content -Path $filePath -Encoding UTF8
 
         $result = Test-TraceabilityDocument -FilePath $filePath
@@ -476,6 +505,10 @@ Describe 'Test-TraceabilityDocument knowledge documents' {
     It 'flags duplicate ids in a knowledge index' {
         $filePath = Join-Path $TestDrive 'index.md'
         @'
+---
+type: bundle
+title: Knowledge Index
+---
 # Knowledge Index
 
 ## Knowledge Index
@@ -497,18 +530,23 @@ Describe 'Test-TraceabilityDocument knowledge documents' {
         $ruleDir = Join-Path $TestDrive 'openspec/knowledge/business-rules'
         New-Item -ItemType Directory -Path $ruleDir -Force | Out-Null
         @'
-## Business Rule
-
-| Field | Value |
-| --- | --- |
-| Rule ID | AUTH-RULE-001 |
-| Status | Active |
+---
+type: business-rule
+id: AUTH-RULE-001
+status: Active
+---
+# Business Rule
 '@ | Set-Content -Path (Join-Path $ruleDir 'AUTH-RULE-001.md') -Encoding UTF8
 
         $changeDirectory = Join-Path $TestDrive 'openspec/changes/change-k3'
         New-Item -ItemType Directory -Path $changeDirectory -Force | Out-Null
         $filePath = Join-Path $changeDirectory 'knowledge-delta.md'
         @'
+---
+type: knowledge-delta
+change_id: change-k3
+status: Draft
+---
 # Knowledge Delta
 
 ## Knowledge Delta
@@ -523,4 +561,55 @@ Describe 'Test-TraceabilityDocument knowledge documents' {
 
         $result.IsValid | Should Be $true
     }
+
+    It 'accepts a valid glossary term with frontmatter' {
+        $filePath = Join-Path $TestDrive 'AUTH-TERM-030.md'
+        @'
+---
+type: glossary-term
+id: AUTH-TERM-030
+status: Active
+---
+# Glossary Term
+
+## Definition
+- A valid definition.
+'@ | Set-Content -Path $filePath -Encoding UTF8
+
+        $result = Test-TraceabilityDocument -FilePath $filePath
+
+        $result.DocumentType | Should Be 'GlossaryTerm'
+        $result.IsValid | Should Be $true
+    }
 }
+
+Describe 'Get-Frontmatter' {
+    It 'parses scalar and list fields' {
+        $lines = @'
+---
+type: glossary-term
+id: AUTH-TERM-001
+status: Active
+related_reqs:
+  - REQ-001
+  - REQ-002
+---
+# body
+'@ -split "`r?`n"
+
+        Get-FrontmatterValue -Lines $lines -Key 'type' | Should Be 'glossary-term'
+        Get-FrontmatterValue -Lines $lines -Key 'id' | Should Be 'AUTH-TERM-001'
+        Get-FrontmatterValue -Lines $lines -Key 'related_reqs' | Should Be 'REQ-001, REQ-002'
+    }
+
+    It 'returns empty when there is no frontmatter' {
+        $lines = @'
+# No frontmatter here
+
+body
+'@ -split "`r?`n"
+
+        Get-FrontmatterValue -Lines $lines -Key 'type' | Should Be ''
+    }
+}
+

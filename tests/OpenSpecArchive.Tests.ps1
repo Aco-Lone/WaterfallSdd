@@ -1,5 +1,5 @@
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$archiveScriptPath = Join-Path $repoRoot 'scripts\openspec-archive.ps1'
+$archiveScriptPath = Join-Path $repoRoot 'scripts' 'openspec-archive.ps1'
 
 if (-not (Test-Path $archiveScriptPath)) {
     throw "Archive script not found: $archiveScriptPath"
@@ -134,15 +134,20 @@ Describe 'Invoke-OpenSpecArchive knowledge' {
         $glossaryDir = Join-Path $TestDrive 'openspec/knowledge/glossary'
         New-Item -ItemType Directory -Path $glossaryDir -Force | Out-Null
         @'
-## Glossary Term
-
-| Field | Value |
-| --- | --- |
-| Term ID | AUTH-TERM-001 |
-| Status | Active |
+---
+type: glossary-term
+id: AUTH-TERM-001
+status: Active
+---
+# Glossary Term
 '@ | Set-Content -Path (Join-Path $glossaryDir 'AUTH-TERM-001.md') -Encoding UTF8
 
         @'
+---
+type: knowledge-delta
+change_id: change-k
+status: Draft
+---
 # Knowledge Delta
 
 ## Knowledge Delta
@@ -156,15 +161,15 @@ Describe 'Invoke-OpenSpecArchive knowledge' {
         $changeDecisionsDir = Join-Path $changeDirectory 'decisions'
         New-Item -ItemType Directory -Path $changeDecisionsDir -Force | Out-Null
         @'
-## Decision Record
-
-| Field | Value |
-| --- | --- |
-| ADR ID | ADR-0001 |
-| Title | Use token auth |
-| Status | Accepted |
-| Supersedes |  |
-| Superseded By |  |
+---
+type: decision-record
+id: ADR-0001
+title: Use token auth
+status: Accepted
+supersedes: ""
+superseded_by: ""
+---
+# Decision Record
 '@ | Set-Content -Path (Join-Path $changeDecisionsDir 'ADR-0001-token.md') -Encoding UTF8
 
         $result = Invoke-OpenSpecArchive -ChangeId 'change-k' -WorkspaceRoot $TestDrive
@@ -191,29 +196,29 @@ Describe 'Invoke-OpenSpecArchive knowledge' {
         $baselineDecisionsDir = Join-Path $TestDrive 'openspec/decisions'
         New-Item -ItemType Directory -Path $baselineDecisionsDir -Force | Out-Null
         @'
-## Decision Record
-
-| Field | Value |
-| --- | --- |
-| ADR ID | ADR-0001 |
-| Title | Old decision |
-| Status | Accepted |
-| Supersedes |  |
-| Superseded By |  |
+---
+type: decision-record
+id: ADR-0001
+title: Old decision
+status: Accepted
+supersedes: ""
+superseded_by: ""
+---
+# Decision Record
 '@ | Set-Content -Path (Join-Path $baselineDecisionsDir 'ADR-0001-old.md') -Encoding UTF8
 
         $changeDecisionsDir = Join-Path $changeDirectory 'decisions'
         New-Item -ItemType Directory -Path $changeDecisionsDir -Force | Out-Null
         @'
-## Decision Record
-
-| Field | Value |
-| --- | --- |
-| ADR ID | ADR-0002 |
-| Title | New decision |
-| Status | Accepted |
-| Supersedes | ADR-0001 |
-| Superseded By |  |
+---
+type: decision-record
+id: ADR-0002
+title: New decision
+status: Accepted
+supersedes: ADR-0001
+superseded_by: ""
+---
+# Decision Record
 '@ | Set-Content -Path (Join-Path $changeDecisionsDir 'ADR-0002-new.md') -Encoding UTF8
 
         $result = Invoke-OpenSpecArchive -ChangeId 'change-k-super' -WorkspaceRoot $TestDrive

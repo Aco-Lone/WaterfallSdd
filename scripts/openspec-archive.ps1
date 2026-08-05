@@ -328,11 +328,35 @@ function Set-KnowledgeFileField {
     )
 
     $lines = @(Get-Content -Path $FilePath -Encoding UTF8)
-    $fieldPattern = '^\|\s*' + [regex]::Escape($FieldName) + '\s*\|'
+    $fieldPattern = '^' + [regex]::Escape($FieldName) + ':\s*'
+    $inFrontmatter = $false
+    $updated = $false
+
     for ($index = 0; $index -lt $lines.Count; $index++) {
-        if ($lines[$index] -match $fieldPattern) {
-            $lines[$index] = "| $FieldName | $NewValue |"
+        if ($lines[$index].Trim() -eq '---') {
+            if (-not $inFrontmatter) {
+                $inFrontmatter = $true
+                continue
+            }
+            else {
+                break
+            }
+        }
+
+        if ($inFrontmatter -and $lines[$index] -match $fieldPattern) {
+            $lines[$index] = "${FieldName}: $NewValue"
+            $updated = $true
             break
+        }
+    }
+
+    if (-not $updated -and $inFrontmatter) {
+        # Insert the field just after the opening frontmatter marker.
+        for ($index = 0; $index -lt $lines.Count; $index++) {
+            if ($lines[$index].Trim() -eq '---') {
+                $lines = $lines[0..$index] + @("${FieldName}: $NewValue") + $lines[($index + 1)..($lines.Count - 1)]
+                break
+            }
         }
     }
 
@@ -352,29 +376,33 @@ function New-BaselineKnowledgeFile {
     )
 
     if ($Kind.Trim().ToUpperInvariant() -eq 'TERM') {
-        $section = 'Glossary Term'
-        $idField = 'Term ID'
+        $type = 'glossary-term'
+        $bodyHeading = 'Glossary Term'
     }
     else {
-        $section = 'Business Rule'
-        $idField = 'Rule ID'
+        $type = 'business-rule'
+        $bodyHeading = 'Business Rule'
     }
 
     $lines = New-Object System.Collections.Generic.List[string]
-    $lines.Add("## $section")
+    $lines.Add('---')
+    $lines.Add("type: $type")
+    $lines.Add("id: $($Delta.KnowledgeId)")
+    $lines.Add('status: Active')
+    $lines.Add('related_reqs:')
+    foreach ($reqId in ($Delta.RelatedRequirementIds -split ',')) {
+        $trimmed = $reqId.Trim()
+        if (-not [string]::IsNullOrWhiteSpace($trimmed)) {
+            $lines.Add("  - $trimmed")
+        }
+    }
+    $lines.Add('---')
     $lines.Add('')
-    $lines.Add('| Field | Value |')
-    $lines.Add('| --- | --- |')
-    $lines.Add("| $idField | $($Delta.KnowledgeId) |")
-    $lines.Add('| Status | Active |')
+    $lines.Add("# $bodyHeading")
     $lines.Add('')
     $lines.Add('## Summary')
     $lines.Add('')
     $lines.Add("- $($Delta.Summary)")
-    $lines.Add('')
-    $lines.Add('## Related Requirement IDs')
-    $lines.Add('')
-    $lines.Add("- $($Delta.RelatedRequirementIds)")
     $lines.Add('')
     $lines.Add('## Rationale')
     $lines.Add('')
@@ -443,14 +471,8 @@ function Get-KnowledgeFileFieldValue {
         [string]$FieldName
     )
 
-    $fieldPattern = '^\|\s*' + [regex]::Escape($FieldName) + '\s*\|\s*(.*?)\s*\|'
-    foreach ($line in Get-Content -Path $FilePath -Encoding UTF8) {
-        if ($line -match $fieldPattern) {
-            return $Matches[1].Trim()
-        }
-    }
-
-    return ''
+    $lines = (Get-Content -Path $FilePath -Raw -Encoding UTF8) -split "`r?`n"
+    return Get-FrontmatterValue -Lines $lines -Key $FieldName
 }
 
 function Promote-DecisionRecords {
@@ -471,7 +493,7 @@ function Promote-DecisionRecords {
     New-Item -ItemType Directory -Path $baselineDecisionsDir -Force | Out-Null
 
     foreach ($file in Get-ChildItem -Path $changeDecisionsDir -Filter '*.md' -File) {
-        $status = Get-KnowledgeFileFieldValue -FilePath $file.FullName -FieldName 'Status'
+        $status = Get-KnowledgeFileFieldValue -FilePath $file.FullName -FieldName 'status'
         if ($status -ne 'Accepted') {
             continue
         }
@@ -479,14 +501,14 @@ function Promote-DecisionRecords {
         $destination = Join-Path $baselineDecisionsDir $file.Name
         Copy-Item -Path $file.FullName -Destination $destination -Force
 
-        $supersedes = Get-KnowledgeFileFieldValue -FilePath $file.FullName -FieldName 'Supersedes'
-        $newAdrId = Get-KnowledgeFileFieldValue -FilePath $file.FullName -FieldName 'ADR ID'
+        $supersedes = Get-KnowledgeFileFieldValue -FilePath $file.FullName -FieldName 'supersedes'
+        $newAdrId = Get-KnowledgeFileFieldValue -FilePath $file.FullName -FieldName 'id'
         if (-not [string]::IsNullOrWhiteSpace($supersedes)) {
             foreach ($existing in Get-ChildItem -Path $baselineDecisionsDir -Filter '*.md' -File) {
-                $existingId = Get-KnowledgeFileFieldValue -FilePath $existing.FullName -FieldName 'ADR ID'
+                $existingId = Get-KnowledgeFileFieldValue -FilePath $existing.FullName -FieldName 'id'
                 if ($existingId -eq $supersedes) {
-                    Set-KnowledgeFileField -FilePath $existing.FullName -FieldName 'Status' -NewValue 'Superseded'
-                    Set-KnowledgeFileField -FilePath $existing.FullName -FieldName 'Superseded By' -NewValue $newAdrId
+                    Set-KnowledgeFileField -FilePath $existing.FullName -FieldName 'status' -NewValue 'Superseded'
+                    Set-KnowledgeFileField -FilePath $existing.FullName -FieldName 'superseded_by' -NewValue $newAdrId
                 }
             }
         }
