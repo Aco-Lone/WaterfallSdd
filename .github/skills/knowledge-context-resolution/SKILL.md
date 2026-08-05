@@ -27,14 +27,21 @@ user-invocable: false
 ## Procedure
 
 1. 作業対象の change ID、subsystem、Requirement ID、Design Element ID を特定する。
-2. openspec/knowledge/index.md から対象 ID の正本パスを解決する。
+2. openspec/knowledge/index.md（OKF `type: bundle`）から対象 ID の正本パスを解決する。
 3. REQ の Related Knowledge から TERM / RULE を取得する。
 4. DSG の Related Knowledge と Decision Record IDs から Accepted ADR を取得する。
-5. Status、有効期間、Supersedes を評価する。Obsolete / Superseded / Rejected は現行判断に使わない。
+5. 各正本ファイルの frontmatter から `status`、`effective_from` / `effective_until`、`supersedes` を評価する。Obsolete / Superseded / Rejected は現行判断に使わない。
 6. 未解決参照がある場合だけ、関連用語・タグ・ID で全文検索する。
 7. 全文検索で発見した未参照知識は候補として提示し、暗黙に正本として採用しない。
 8. 成果物へ使用した Knowledge ID と ADR ID を記録する。
 9. ゲートまたはレビュー時は scripts/knowledge-context-manifest.ps1 で Context Manifest を生成する。
+
+## OKF and Agent Auto-Update
+
+- 正本（TERM / RULE / ADR）と index / log は OKF 準拠とする。メタ情報は Markdown 表でなく YAML frontmatter（`type` 必須、`id` はファイル名と一致）に一本化する。
+- 区分 A（承認不要）: `index.md` の再生成、`log.md` への追記、frontmatter の機械的整合、トレーサビリティと OKF 妥当性の検証。scripts/knowledge-index.ps1 が index.md（`type: bundle`）と log.md（`type: changelog`）を生成・追記する。
+- 区分 B（Draft 起票・人間承認）: 新規 TERM / RULE / ADR を `status: Draft` で起票、change 配下 knowledge-delta.md への ADDED / MODIFIED / REMOVED 追記。
+- 区分 C（禁止）: 承認前 Draft で baseline を直接更新、Accepted ADR 本文の書き換え、コードだけからの業務ルール自動承認、会話履歴を正本として書き込むこと。
 
 ## Per-Phase Scope
 
@@ -57,6 +64,7 @@ user-invocable: false
 ## References
 
 - [Knowledge index template](../../../templates/knowledge-index.md)
+- [Knowledge log template](../../../templates/knowledge-log.md)
 - [Glossary term template](../../../templates/glossary-term.md)
 - [Business rule template](../../../templates/business-rule.md)
 - [ADR template](../../../templates/adr.md)

@@ -25,6 +25,7 @@
     "templates/adr.md",
     "templates/knowledge-delta.md",
     "templates/knowledge-index.md",
+    "templates/knowledge-log.md",
     "README.md",
     "spec-driven-development-options.md",
     "workflow-approval-gate-definition.md"
