@@ -1,14 +1,16 @@
+---
+type: knowledge-delta
+change_id: ""
+status: Draft
+author: ""
+reviewer: ""
+---
+
 # Knowledge Delta Template
 
-## Document Control
-
-| Field | Value |
-| --- | --- |
-| Change ID |  |
-| Related Spec Delta | spec-delta.md |
-| Status | Draft / In Review / Approved / Archived |
-| Author |  |
-| Reviewer |  |
+- OKF `type: knowledge-delta`. Document Control metadata lives in the YAML frontmatter above.
+- `status` allows one of: Draft / In Review / Approved / Archived.
+- `Related Spec Delta` is spec-delta.md in the same change directory.
 
 ## Delta Principles
 

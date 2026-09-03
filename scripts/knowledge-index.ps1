@@ -54,30 +54,27 @@ function Get-KnowledgeEntry {
 
     switch ($Kind) {
         'TERM' {
-            $section = 'Glossary Term'
-            $idField = 'Term ID'
-            $summary = Get-ControlFieldValue -Lines $lines -SectionHeading $section -FieldName 'Term'
+            $summary = Get-FrontmatterValue -Lines $lines -Key 'term'
+            if ([string]::IsNullOrWhiteSpace($summary)) {
+                $summary = Get-SectionFirstBullet -Lines $lines -SectionHeading 'Definition'
+            }
         }
         'RULE' {
-            $section = 'Business Rule'
-            $idField = 'Rule ID'
             $summary = Get-SectionFirstBullet -Lines $lines -SectionHeading 'Condition'
         }
         'ADR' {
-            $section = 'Decision Record'
-            $idField = 'ADR ID'
-            $summary = Get-ControlFieldValue -Lines $lines -SectionHeading $section -FieldName 'Title'
+            $summary = Get-FrontmatterValue -Lines $lines -Key 'title'
         }
     }
 
-    $knowledgeId = Get-ControlFieldValue -Lines $lines -SectionHeading $section -FieldName $idField
+    $knowledgeId = Get-FrontmatterValue -Lines $lines -Key 'id'
     if ([string]::IsNullOrWhiteSpace($knowledgeId)) {
         return $null
     }
 
-    $status = Get-ControlFieldValue -Lines $lines -SectionHeading $section -FieldName 'Status'
-    $owner = Get-ControlFieldValue -Lines $lines -SectionHeading $section -FieldName 'Owner'
-    $subsystem = Get-ControlFieldValue -Lines $lines -SectionHeading $section -FieldName 'Subsystem'
+    $status = Get-FrontmatterValue -Lines $lines -Key 'status'
+    $owner = Get-FrontmatterValue -Lines $lines -Key 'owner'
+    $subsystem = Get-FrontmatterValue -Lines $lines -Key 'subsystem'
 
     $relativePath = [System.IO.Path]::GetRelativePath($KnowledgeRoot, $FilePath) -replace '\\', '/'
 
@@ -126,6 +123,56 @@ function Get-KnowledgeEntries {
     return , $entries.ToArray()
 }
 
+function Add-KnowledgeLogEntry {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$KnowledgeDir,
+
+        [Parameter(Mandatory = $true)]
+        [string]$ChangeOrReview,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('ADDED', 'MODIFIED', 'REMOVED')]
+        [string]$Operation,
+
+        [Parameter(Mandatory = $true)]
+        [string]$KnowledgeId,
+
+        [Parameter(Mandatory = $false)]
+        [string]$Notes = ''
+    )
+
+    if (-not (Test-Path $KnowledgeDir)) {
+        New-Item -ItemType Directory -Path $KnowledgeDir -Force | Out-Null
+    }
+
+    $logPath = Join-Path $KnowledgeDir 'log.md'
+    $timestamp = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+
+    if (-not (Test-Path $logPath)) {
+        $header = New-Object System.Collections.Generic.List[string]
+        $header.Add('---')
+        $header.Add('type: changelog')
+        $header.Add('title: Knowledge Log')
+        $header.Add('---')
+        $header.Add('')
+        $header.Add('# Knowledge Log')
+        $header.Add('')
+        $header.Add('- This file records the update history of the knowledge bundle. Entries are appended automatically.')
+        $header.Add('')
+        $header.Add('## Log')
+        $header.Add('')
+        $header.Add('| Timestamp | Change / Review | Operation | Knowledge ID | Notes |')
+        $header.Add('| --- | --- | --- | --- | --- |')
+        $header | Set-Content -Path $logPath -Encoding UTF8
+    }
+
+    $entryLine = '| {0} | {1} | {2} | {3} | {4} |' -f $timestamp, $ChangeOrReview, $Operation, $KnowledgeId, $Notes
+    Add-Content -Path $logPath -Value $entryLine -Encoding UTF8
+
+    return $logPath
+}
+
 function Invoke-KnowledgeIndex {
     param(
         [Parameter(Mandatory = $false)]
@@ -144,6 +191,11 @@ function Invoke-KnowledgeIndex {
     $duplicateIds = @($entries | Group-Object -Property KnowledgeId | Where-Object { $_.Count -gt 1 } | Select-Object -ExpandProperty Name)
 
     $lines = New-Object System.Collections.Generic.List[string]
+    $lines.Add('---')
+    $lines.Add('type: bundle')
+    $lines.Add('title: Knowledge Index')
+    $lines.Add('---')
+    $lines.Add('')
     $lines.Add('# Knowledge Index')
     $lines.Add('')
     $lines.Add('## Index Principles')
